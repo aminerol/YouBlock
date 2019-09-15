@@ -1,0 +1,3 @@
+- clean the thumbnail url from all tokens and signatures so it can be called from cache
+- change Image with Image with caching and progressive Image
+-
