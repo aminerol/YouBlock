@@ -18,7 +18,7 @@ import SegmentedControlTab from 'react-native-segmented-control-tab';
 import { Ionicons } from '@expo/vector-icons';
 const { width, height } = Dimensions.get('window');
 import YoutubeAPI from '../services/youtube';
-import VideoItem from '../components/videoItem';
+import HomeVideoItem from '../components/homeVideoItem';
 var _ = require('lodash');
 
 var slidingPanel = {};
@@ -90,6 +90,7 @@ export default class HomeScreen extends React.Component {
           }));
           this.inProgressNetworkReq = false;
         }).catch(error => {
+          console.log(error);
           this.setState({ error, loading: false });
           this.inProgressNetworkReq = false;
         });
@@ -138,6 +139,10 @@ export default class HomeScreen extends React.Component {
       );
     };
 
+    _renderItem = ({item}) => (
+      <HomeVideoItem video={item} />
+    );
+
     componentDidMount() {
       this.fetchData();
     }
@@ -162,16 +167,12 @@ export default class HomeScreen extends React.Component {
             headerLayoutHeight = {100}
             headerLayout = { () =>
               {
-
                 return !this.state.loading ? (
                   <View style={styles.headerLayoutStyle}>
                     <FlatList
                       data={this.state.videos}
-                      renderItem={({ item }) => (
-                        <VideoItem video={item} />
-                      )}
+                      renderItem={this._renderItem}
                       keyExtractor={item => item.id.toString()}
-                      // ListHeaderComponent={this._renderHeader}
                       ListFooterComponent={this._renderFooter}
                       onRefresh={this._handleRefresh}
                       refreshing={this.state.refreshing}

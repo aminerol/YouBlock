@@ -2,15 +2,20 @@ import * as React from 'react';
 import {
   Text,
   StyleSheet,
-  View
+  View,
+  FlatList
 } from 'react-native';
 import { BackHandler } from 'react-native';
 import { withNavigation, NavigationActions, StackActions } from 'react-navigation';
+import SearchVideoItem from '../components/searchVideoItem';
+import data from '../data.json'
 
 @withNavigation
 export default class ResultScreen extends React.Component {
-    static navigationOptions = {
-      title: 'Result',
+    static navigationOptions =({navigation})=> {
+      return {
+        title: navigation.getParam('text'),
+      };
     };
 
     constructor(props){
@@ -41,8 +46,17 @@ export default class ResultScreen extends React.Component {
   
     render() {
       return (
+
         <View style={styles.container}>
-          <Text>{this.props.navigation.getParam('text')} result!</Text>
+          <FlatList
+            data={data}
+            renderItem={({ item }) => (
+              <SearchVideoItem video={item}/>
+            )}
+            keyExtractor={item => item.id.toString()}
+            onEndReachedThreshold={0.5}
+            initialNumToRender={10}
+          />
         </View>
       );
     }
@@ -50,8 +64,5 @@ export default class ResultScreen extends React.Component {
 
 const styles = StyleSheet.create({
     container: {
-      flex: 1,
-      alignItems: 'center',
-      justifyContent: 'center',
     },
 });

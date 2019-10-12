@@ -5,16 +5,28 @@ import { fromRight } from 'react-navigation-transitions';
 import {Image} from 'react-native';
 import React, { Component } from 'react';
 import * as Font from 'expo-font';
+import { Ionicons } from '@expo/vector-icons';
+import { ActionSheetProvider } from '@expo/react-native-action-sheet';
+import { createAppContainer, createStackNavigator, createBottomTabNavigator} from 'react-navigation';
 
-import { createAppContainer, createStackNavigator} from 'react-navigation';
+const getTabBarIcon = (navigation, focused, tintColor) => {
+  const { routeName } = navigation.state;
+  let iconName;
+  if (routeName === 'Home') {
+    iconName = 'md-home';
+  } else if (routeName === 'Settings') {
+    iconName = 'ios-options';
+  }
+  return <Ionicons name={iconName} size={25} color={tintColor} />;
+};
 
 let SearchStack = createStackNavigator(
   {
-    Home: HomeScreen,
+    Feed: HomeScreen,
     Search: SearchScreen,
   },
   {
-    initialRouteName: 'Home',
+    initialRouteName: 'Feed',
     transitionConfig: () => fromRight(),
     navigationOptions: {
       header: null,
@@ -26,10 +38,61 @@ let SearchStack = createStackNavigator(
 );
 
 let MainStack = createStackNavigator({
-  Feed: SearchStack,
+  Feed: { screen: SearchStack},
   Result: ResultScreen,
 });
-const AppContainer = createAppContainer(MainStack);
+
+let bottomTab = createBottomTabNavigator(
+  {
+    Home: {
+      screen: MainStack,
+      navigationOptions: {
+        tabBarLabel: 'Home',
+      },
+    },
+  },
+  {
+    defaultNavigationOptions: ({ navigation }) => {
+      return {
+        tabBarIcon: ({ focused, tintColor }) => getTabBarIcon(navigation, focused, tintColor),
+      }
+    },
+    tabBarOptions: {
+      activeTintColor: '#FF0000',
+      inactiveTintColor: '#606060',
+      labelStyle: {
+        fontSize: 13,
+        fontFamily: 'Roboto-Regular',
+        color: '#606060', 
+      }
+    },
+  }
+)
+
+const getCurrentRouteName = (navigationState) => {
+  if (!navigationState) {
+    return null
+  }
+  const route = navigationState.routes[navigationState.index]
+  // dive into nested navigators
+  if (route.routes) {
+    return getCurrentRouteName(route)
+  }
+  return route.routeName
+}
+
+MainStack.navigationOptions = ({ navigation }) => {
+  const currentScreen = getCurrentRouteName(navigation.state)
+  let tabBarVisible = true;
+  if (currentScreen == "Search") {
+    tabBarVisible = false;
+  }
+  return {
+    tabBarVisible,
+  };
+};
+
+const AppContainer = createAppContainer(bottomTab);
 
 export default class App extends Component {
   constructor(props) {
@@ -55,7 +118,11 @@ export default class App extends Component {
 
   render() {
     if (this.state.fontsLoaded) {
-      return <AppContainer />
+      return (
+        <ActionSheetProvider>
+          <AppContainer />
+        </ActionSheetProvider>
+      )
     }
     return (
       <Image

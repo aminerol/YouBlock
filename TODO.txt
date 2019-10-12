@@ -1,3 +1,7 @@
 - clean the thumbnail url from all tokens and signatures so it can be called from cache
 - change Image with Image with caching and progressive Image
--
+- Test The SearchLayout on iOs when click on clear text
+- make the flatlist have sections so u can show to what topic those videos belongs
+- change the deault flatlist with optimized and fast
+- fix the warning about cant set state inside render of search screen (hint : look inside react-navigation-addon-search-layout)
+- save the seached queries and into storage and list them when search screen appers
