@@ -11,25 +11,19 @@ import {
   ActivityIndicator
 } from 'react-native';
 import { BorderlessButton } from 'react-native-gesture-handler';
-import SlidingPanel from 'react-native-sliding-up-down-panels';
 import SearchLayout from 'react-navigation-addon-search-layout';
-import { getNavBarHeight } from 'react-native-iphone-x-helper';
-import SegmentedControlTab from 'react-native-segmented-control-tab';
 import { Ionicons } from '@expo/vector-icons';
 const { width, height } = Dimensions.get('window');
 import YoutubeAPI from '../services/youtube';
 import HomeVideoItem from '../components/homeVideoItem';
 var _ = require('lodash');
 
-var slidingPanel = {};
-const navHeight = getNavBarHeight();
 
 export default class HomeScreen extends React.Component {
 
     constructor(props) { 
       super(props);
       this.state = {
-        selectedIndex: 0,
         videos: [],
         count: 0,
         loading: true,
@@ -57,21 +51,6 @@ export default class HomeScreen extends React.Component {
                     name="md-search"
                     size={Platform.OS === 'ios' ? 22 : 25}
                     color={SearchLayout.DefaultTintColor}/>
-                </BorderlessButton>
-                <BorderlessButton
-                    onPress={() => {
-                      const navHeight = getNavBarHeight();
-                      if(navHeight === slidingPanel.state.heightAnim._value){
-                        slidingPanel.onRequestClose();
-                      }else{
-                        slidingPanel.onRequestStart();
-                      }                      
-                    }}
-                    style={{ marginRight: 15 }}>
-                    <Ionicons
-                      name="md-options"
-                      size={Platform.OS === 'ios' ? 22 : 25}
-                      color={SearchLayout.DefaultTintColor}/>
                 </BorderlessButton>
             </View>
         ),
@@ -147,64 +126,28 @@ export default class HomeScreen extends React.Component {
       this.fetchData();
     }
 
-    handleSingleIndexSelect = (index) => {
-      this.setState(prevState => ({ ...prevState, selectedIndex: index }))
-    }
-  
     render() {
-      const navHeight = getNavBarHeight();
-      const { selectedIndex } = this.state
       return (
-        <View>
-          <SlidingPanel
-            ref={component => { 
-              slidingPanel = component; 
-            }}
-            
-            allowDragging = {false}
-            allowAnimation = {false}
-            panelPosition= "top"
-            headerLayoutHeight = {100}
-            headerLayout = { () =>
-              {
-                return !this.state.loading ? (
-                  <View style={styles.headerLayoutStyle}>
-                    <FlatList
-                      data={this.state.videos}
-                      renderItem={this._renderItem}
-                      keyExtractor={item => item.id.toString()}
-                      ListFooterComponent={this._renderFooter}
-                      onRefresh={this._handleRefresh}
-                      refreshing={this.state.refreshing}
-                      onEndReached={this._handleLoadMore}
-                      onEndReachedThreshold={0.5}
-                      initialNumToRender={10}
-                    />
-                  </View>
-                ) : (
-                  <View style={{ flex: 1, width, height, justifyContent: 'center', alignContent: 'center', }} >
-                    <ActivityIndicator size="large" color={'#007aff'} />
-                  </View>
-                );
-              }
-            }
-            slidingPanelLayout = { () => 
-              <View style={styles.slidingPanelLayoutStyle}>
-                <SegmentedControlTab
-                  values={['Videos', 'Channels']}
-                  selectedIndex={selectedIndex}
-                  tabStyle={styles.tabStyle}
-                  tabTextStyle={styles.tabTextStyle}
-                  activeTabStyle={styles.activeTabStyle}
-                  onTabPress={this.handleSingleIndexSelect}
-                />
-              </View>
-            }
-            AnimationSpeed = {500}
-            slidingPanelLayoutHeight = {navHeight}
-          />
-        </View>
-      );
+        !this.state.loading ? (
+          <View style={styles.headerLayoutStyle}>
+            <FlatList
+              data={this.state.videos}
+              renderItem={this._renderItem}
+              keyExtractor={item => item.id.toString()}
+              ListFooterComponent={this._renderFooter}
+              onRefresh={this._handleRefresh}
+              refreshing={this.state.refreshing}
+              onEndReached={this._handleLoadMore}
+              onEndReachedThreshold={0.5}
+              initialNumToRender={10}
+            />
+          </View>
+        ) : (
+          <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center'}} >
+            <ActivityIndicator size="large" color={'#007aff'} />
+          </View>
+        )
+      )
     }
 }
 
@@ -213,24 +156,5 @@ const styles = StyleSheet.create({
       width, 
       height,
       paddingTop: 6,
-    },
-    slidingPanelLayoutStyle: {
-      width,
-      height: navHeight,
-      backgroundColor: 'white', 
-      justifyContent: 'center',
-      alignItems: 'center',
-      paddingHorizontal: '10%'
-    },
-    tabTextStyle: {
-      fontFamily: 'Roboto-Regular',
-      color: '#333333', 
-      fontSize: 16,
-    },
-    tabStyle: {
-      borderColor: '#D52C43',
-    },
-    activeTabStyle: {
-      backgroundColor: '#D52C43',
     },
 });
