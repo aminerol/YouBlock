@@ -9,6 +9,8 @@ import { Ionicons } from '@expo/vector-icons';
 import SearchLayout from 'react-navigation-addon-search-layout';
 import Touchable from 'react-native-platform-touchable';
 import YoutubeAPI from '../services/youtube';
+import LocalStorage from '../services/localStorage';
+var _ = require('lodash');
 
 
 export default class SearchScreen extends React.Component {
@@ -20,16 +22,39 @@ export default class SearchScreen extends React.Component {
       searchText: null,
       suggestions: []
     };
-  
+
+    componentWillMount = () => {
+      LocalStorage.get("suggestions").then(suggestions => {
+        const result = _.transform(suggestions, function(result, value) {
+          result.push({'query': value, 'type': true});
+        }, []);
+        this.setState({ suggestions: result })
+      })
+    };
+    
     _handleQueryChange = searchText => {
-      YoutubeAPI.getSuggestions(searchText).then(queries => this.setState({ suggestions: queries }));
+      YoutubeAPI.getSuggestions(searchText).then(queries => {
+        const result = _.transform(queries, function(result, value) {
+          result.push({'query': value, 'type': false});
+        }, []);
+        this.setState({ suggestions: result })
+      });
       this.setState({ searchText });
     };
-  
-    _executeSearch = searchText => {
-      console.log(searchText);
-      
-    };
+
+    _renderRightItemIcon = (iconName, onClick) => {
+      return (
+        <Touchable
+          background={Touchable.Ripple('rgba(180, 180, 180, 1)', true)}
+          style={{ flex: 0.1, justifyContent: 'center', alignItems: 'center'}}
+          onPress={onClick}>
+          <Ionicons
+              name={iconName}
+              size={24}
+              color="#757575"/>
+        </Touchable>
+      )
+    }
 
     _renderSuggestions = (searchText) => {
       return (
@@ -39,42 +64,46 @@ export default class SearchScreen extends React.Component {
             renderItem={({ item }) => (
               <Touchable 
                 onPress={() => {
-                  this.searchBar._handleChangeQuery(item);
+                  LocalStorage.push("suggestions", item.query, true)
+                  this.searchBar._handleChangeQuery(item.query);
                   this.props.navigation.navigate('Result', {
-                    text: item,
+                    text: item.query,
                   })
                 }}
                 style={styles.suggestionRow}
                 background={Touchable.Ripple('rgba(180, 180, 180, 1)', false)} >
-
                   <>
                     <View style={{flex: 0.9, flexDirection: "row"}}>
                       <Ionicons
                         name="md-search"
                         size={24}
                         color="#757575"/>
-                      <Text style={styles.suggestionText}>{item}</Text>
+                      <Text style={styles.suggestionText}>{item.query}</Text>
                     </View>
+                    { !item.type ? 
+                        this._renderRightItemIcon("md-create", () => {
+                          this.searchBar._handleChangeQuery(item.query);
+                          this.searchBar.setState({
+                            q: item.query
+                          })
+                        }) 
+                      :
+                        this._renderRightItemIcon("md-close", () => {
+                          LocalStorage.pop("suggestions", item.query)
+                            .then(x => LocalStorage.get('suggestions')
+                            .then((suggestions) => { 
 
-
-                    <Touchable
-                      background={Touchable.Ripple('rgba(180, 180, 180, 1)', true)}
-                      style={{ flex: 0.1, justifyContent: 'center', alignItems: 'center'}}
-                      onPress={() => {
-                        this.searchBar._handleChangeQuery(item);
-                        this.searchBar.setState({
-                          q: item
+                              const result = _.transform(suggestions, function(result, value) {
+                                result.push({'query': value, 'type': true});
+                              }, []);
+                              this.setState({ suggestions: result })
+                            }));
                         })
-                      }}>
-                      <Ionicons
-                          name="md-create"
-                          size={24}
-                          color="#757575"/>
-                    </Touchable>
+                    }
                   </>
               </Touchable>
             )}
-            keyExtractor={item => item.toString()}
+            keyExtractor={item => item.query.toString()}
             initialNumToRender={10}
           />
         </View>
@@ -91,12 +120,21 @@ export default class SearchScreen extends React.Component {
           text={this.state.searchText}
           onChangeQuery={this._handleQueryChange}
           onSubmit={(searchText)=>{
+            LocalStorage.push("suggestions", searchText, true)
             this.props.navigation.navigate('Result', {
               text: searchText,
             })
           }}
+          onClearQuery={()=>{
+            LocalStorage.get("suggestions").then(suggestions => {
+              const result = _.transform(suggestions, function(result, value) {
+                result.push({'query': value, 'type': true});
+              }, []);
+              this.setState({ suggestions: result })
+            })
+          }}
         >
-          {searchText ? this._renderSuggestions(searchText) : null}
+          {this._renderSuggestions(searchText)}
       </SearchLayout>
       );
     }

@@ -23,21 +23,20 @@ class youtubeAPI {
 
     async getHomeVideos(){
         try {
-            const postBody = JSON.stringify({
-                "context":{
-                   "client":{
-                      "clientName":"ANDROID",
-                      "clientVersion":"14.33.56"
-                   }
-                },
-                "browseId":"FEwhat_to_watch",
-                ...(this.continuationToken != '' && {'continuation': this.continuationToken}),
-            })
             const response = await fetch(`${BASE_URL}/browse?key=${API_KEY}`, {
                 method: 'POST',
                 headers: this.headers,
                 credentials: 'include',
-                body: postBody,
+                body: JSON.stringify({
+                    "context":{
+                       "client":{
+                          "clientName":"ANDROID",
+                          "clientVersion":"14.33.56"
+                       }
+                    },
+                    "browseId":"FEwhat_to_watch",
+                    ...(this.continuationToken != '' && {'continuation': this.continuationToken}),
+                }),
             });
             const data = await this.status(response);
             var json = await data.text();
