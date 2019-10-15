@@ -25,7 +25,7 @@ export default class SearchVideoItem extends PureComponent {
                 {video.publishedTime + ' • ' + video.views}
             </Text>
         </View>
-        <View style={{flex: 0.25}}>
+        <View>
             <ActionSheet video={video}/>
         </View>
       </View>

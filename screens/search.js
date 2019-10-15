@@ -67,7 +67,7 @@ export default class SearchScreen extends React.Component {
                   LocalStorage.push("suggestions", item.query, true)
                   this.searchBar._handleChangeQuery(item.query);
                   this.props.navigation.navigate('Result', {
-                    text: item.query,
+                    searchText: item.query,
                   })
                 }}
                 style={styles.suggestionRow}
@@ -122,7 +122,7 @@ export default class SearchScreen extends React.Component {
           onSubmit={(searchText)=>{
             LocalStorage.push("suggestions", searchText, true)
             this.props.navigation.navigate('Result', {
-              text: searchText,
+              searchText: searchText,
             })
           }}
           onClearQuery={()=>{

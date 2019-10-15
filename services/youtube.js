@@ -4,7 +4,8 @@ const BASE_URL = 'https://youtubei.googleapis.com/youtubei/v1';
 
 class youtubeAPI {
     constructor() {
-        this.continuationToken = '';
+        this.homeContinuationToken = '';
+        this.searchContinuationToken = '';
         this.headers = new Headers({
             'User-Agent': 'com.google.android.apps.youtube.mango/2.29.52(Linux; U; Android 6.0.1; fr_FR; SM-G532F Build/MMB29T) gzip',
             'Content-Type': 'application/json',
@@ -35,7 +36,7 @@ class youtubeAPI {
                        }
                     },
                     "browseId":"FEwhat_to_watch",
-                    ...(this.continuationToken != '' && {'continuation': this.continuationToken}),
+                    ...(this.homeContinuationToken != '' && {'continuation': this.homeContinuationToken}),
                 }),
             });
             const data = await this.status(response);
@@ -44,7 +45,7 @@ class youtubeAPI {
             if (json != null) {
 
                 sectionListRenderer = {}
-                if(this.continuationToken == ''){
+                if(this.homeContinuationToken == ''){
                     sectionListRenderer = _.first(json.contents.singleColumnBrowseResultsRenderer.tabs).tabRenderer.content.sectionListRenderer;
                     this.headers.set('X-Goog-Visitor-Id', json.responseContext.visitorData)
                 }else{
@@ -52,8 +53,8 @@ class youtubeAPI {
                 }
                 if(sectionListRenderer.continuations[0].nextContinuationData)
                 {
-                    this.continuationToken = sectionListRenderer.continuations[0].nextContinuationData.continuation;
-                    const videos = this.parseVideos(sectionListRenderer.contents);
+                    this.homeContinuationToken = sectionListRenderer.continuations[0].nextContinuationData.continuation;
+                    const videos = this.parseHomeVideos(sectionListRenderer.contents);
                     return Promise.resolve(videos)
                 }else
                     return Promise.resolve([])
@@ -82,7 +83,56 @@ class youtubeAPI {
         }
     }
 
-    parseVideos(topics) {
+    async search(query){
+        try {
+            const response = await fetch(`${BASE_URL}/search?key=${API_KEY}`, {
+                method: 'POST',
+                headers: this.headers,
+                credentials: 'include',
+                body: JSON.stringify({
+                    "context":{
+                       "client":{
+                          "clientName":"ANDROID",
+                          "clientVersion":"14.33.56"
+                       }
+                    },
+                    "query":query,
+                    "search_filter": 'video',
+                    ...(this.searchContinuationToken != '' && {'continuation': this.searchContinuationToken}),
+                }),
+            });
+            const data = await this.status(response);
+            var json = await data.text();
+            json = JSON.parse(json);
+            
+            if (json != null) {
+                
+                contents = {};
+                continuations = {};
+                if(this.searchContinuationToken == ''){
+                    const sectionListRenderer = _.pullAt(json.contents.sectionListRenderer.contents, [0, 2]);
+                    continuations = sectionListRenderer[1].itemSectionRenderer.continuations;
+                    contents = _.concat(sectionListRenderer[0].itemSectionRenderer.contents, sectionListRenderer[1].itemSectionRenderer.contents);
+                    this.headers.set('X-Goog-Visitor-Id', json.responseContext.visitorData)
+                }else{
+                    const sectionListRenderer = json.continuationContents.itemSectionContinuation
+                    continuations = sectionListRenderer.continuations;
+                    contents = sectionListRenderer.contents
+                }
+                if(continuations[0].nextContinuationData)
+                {
+                    this.searchContinuationToken = continuations[0].nextContinuationData.continuation;
+                    const videos = this.parseSearchVideos(contents);
+                    return Promise.resolve(videos)
+                }else
+                    return Promise.resolve([])
+            }
+        } catch (error) {
+            return Promise.reject(error)
+        }
+    }
+
+    parseHomeVideos(topics) {
         var array = []
         const parsedVideos = topics.map(topic => {
             const videos = topic.shelfRenderer.content.horizontalListRenderer.items;
@@ -111,6 +161,33 @@ class youtubeAPI {
         });
         array.push(parsedVideos);
         return _.flatMapDeep(array);
+    }
+
+    parseSearchVideos(videos) {
+        videos = _.filter(videos, 'compactVideoRenderer')
+        const parsedVideos = videos.map(video => {
+            video = video.compactVideoRenderer
+            try {
+                const shortBylineText = _.first(video.shortBylineText.runs);
+                return {
+                    id: video.videoId,
+                    title: _.first(video.title.runs).text,
+                    thumbnail: `https://i.ytimg.com/vi/${video.videoId}/mqdefault.jpg`,
+                    publishedTime: _.first(video.publishedTimeText.runs).text,
+                    owner: {
+                        name: shortBylineText.text,
+                        id: shortBylineText.navigationEndpoint.browseEndpoint.browseId,
+                        username: shortBylineText.navigationEndpoint.browseEndpoint.canonicalBaseUrl,
+                        thumbnail: _.last(video.channelThumbnail.thumbnails).url
+                    },
+                    views: _.first(video.shortViewCountText.runs).text,
+                    duration: _.first(video.thumbnailOverlays).thumbnailOverlayTimeStatusRenderer.text.runs[0].text
+                };
+            } catch (error) {
+                console.log(error, video)
+            }
+        })
+        return parsedVideos;
     }
 }
 
