@@ -33,12 +33,21 @@ export default class SearchScreen extends React.Component {
     };
     
     _handleQueryChange = searchText => {
-      YoutubeAPI.getSuggestions(searchText).then(queries => {
-        const result = _.transform(queries, function(result, value) {
-          result.push({'query': value, 'type': false});
-        }, []);
-        this.setState({ suggestions: result })
-      });
+      if (searchText != '') {
+        YoutubeAPI.getSuggestions(searchText).then(queries => {
+          const result = _.transform(queries, function(result, value) {
+            result.push({'query': value, 'type': false});
+          }, []);
+          this.setState({ suggestions: result })
+        });
+      }else{
+        LocalStorage.get("suggestions").then(suggestions => {
+          const result = _.transform(suggestions, function(result, value) {
+            result.push({'query': value, 'type': true});
+          }, []);
+          this.setState({ suggestions: result })
+        })
+      }
       this.setState({ searchText });
     };
 
@@ -109,7 +118,14 @@ export default class SearchScreen extends React.Component {
         </View>
       )
     }
-  
+
+    onSubmit = (searchText) =>{
+      LocalStorage.push("suggestions", searchText, true)
+      this.props.navigation.navigate('Result', {
+        searchText: searchText,
+      })
+    }
+
     render() {
       let { searchText } = this.state;
       return (
@@ -119,12 +135,7 @@ export default class SearchScreen extends React.Component {
           }}
           text={this.state.searchText}
           onChangeQuery={this._handleQueryChange}
-          onSubmit={(searchText)=>{
-            LocalStorage.push("suggestions", searchText, true)
-            this.props.navigation.navigate('Result', {
-              searchText: searchText,
-            })
-          }}
+          onSubmit={this.onSubmit}
           onClearQuery={()=>{
             LocalStorage.get("suggestions").then(suggestions => {
               const result = _.transform(suggestions, function(result, value) {

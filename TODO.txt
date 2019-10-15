@@ -3,4 +3,5 @@
 - Test The SearchLayout on iOs when click on clear text
 - make the flatlist have sections so u can show to what topic those videos belongs
 - change the deault flatlist with optimized and fast
-- fix the warning about cant set state inside render of search screen (hint : look inside react-navigation-addon-search-layout)
+- make more tests for youtube api, cause is still not that mature yet
+- make the requests to innertube api faster(cutting not needing infos, also some encoding)

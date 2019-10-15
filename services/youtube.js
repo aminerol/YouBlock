@@ -22,8 +22,10 @@ class youtubeAPI {
         }
     }
 
-    async getHomeVideos(){
+    async getHomeVideos(pagination){
         try {
+            if(!pagination)
+                this.homeContinuationToken = ''
             const response = await fetch(`${BASE_URL}/browse?key=${API_KEY}`, {
                 method: 'POST',
                 headers: this.headers,
@@ -47,7 +49,7 @@ class youtubeAPI {
                 sectionListRenderer = {}
                 if(this.homeContinuationToken == ''){
                     sectionListRenderer = _.first(json.contents.singleColumnBrowseResultsRenderer.tabs).tabRenderer.content.sectionListRenderer;
-                    this.headers.set('X-Goog-Visitor-Id', json.responseContext.visitorData)
+                    this.headers.set('X-Goog-Visitor-Id', json.responseContext.visitorData ? json.responseContext.visitorData : '')
                 }else{
                     sectionListRenderer = json.continuationContents.sectionListContinuation;
                 }
@@ -83,8 +85,10 @@ class youtubeAPI {
         }
     }
 
-    async search(query){
+    async search(query, pagination){
         try {
+            if(!pagination)
+                this.searchContinuationToken = ''
             const response = await fetch(`${BASE_URL}/search?key=${API_KEY}`, {
                 method: 'POST',
                 headers: this.headers,
@@ -113,7 +117,7 @@ class youtubeAPI {
                     const sectionListRenderer = _.pullAt(json.contents.sectionListRenderer.contents, [0, 2]);
                     continuations = sectionListRenderer[1].itemSectionRenderer.continuations;
                     contents = _.concat(sectionListRenderer[0].itemSectionRenderer.contents, sectionListRenderer[1].itemSectionRenderer.contents);
-                    this.headers.set('X-Goog-Visitor-Id', json.responseContext.visitorData)
+                    this.headers.set('X-Goog-Visitor-Id', json.responseContext.visitorData ? json.responseContext.visitorData : '')
                 }else{
                     const sectionListRenderer = json.continuationContents.itemSectionContinuation
                     continuations = sectionListRenderer.continuations;
@@ -135,7 +139,8 @@ class youtubeAPI {
     parseHomeVideos(topics) {
         var array = []
         const parsedVideos = topics.map(topic => {
-            const videos = topic.shelfRenderer.content.horizontalListRenderer.items;
+            let videos = topic.shelfRenderer.content.horizontalListRenderer.items;
+            videos = _.filter(videos, 'gridVideoRenderer')
             return videos.map(video => {
                 video = video.gridVideoRenderer;
                 try { 
@@ -144,7 +149,7 @@ class youtubeAPI {
                         id: video.videoId,
                         title: _.first(video.title.runs).text,
                         thumbnail: `https://i.ytimg.com/vi/${video.videoId}/mqdefault.jpg`,
-                        publishedTime: _.first(video.publishedTimeText.runs).text,
+                        publishedTime: video.publishedTimeText ? _.first(video.publishedTimeText.runs).text : 'LIVE',
                         owner: {
                             name: shortBylineText.text,
                             id: shortBylineText.navigationEndpoint.browseEndpoint.browseId,
@@ -173,7 +178,7 @@ class youtubeAPI {
                     id: video.videoId,
                     title: _.first(video.title.runs).text,
                     thumbnail: `https://i.ytimg.com/vi/${video.videoId}/mqdefault.jpg`,
-                    publishedTime: _.first(video.publishedTimeText.runs).text,
+                    publishedTime: video.publishedTimeText ? _.first(video.publishedTimeText.runs).text : 'LIVE',
                     owner: {
                         name: shortBylineText.text,
                         id: shortBylineText.navigationEndpoint.browseEndpoint.browseId,
@@ -184,7 +189,7 @@ class youtubeAPI {
                     duration: _.first(video.thumbnailOverlays).thumbnailOverlayTimeStatusRenderer.text.runs[0].text
                 };
             } catch (error) {
-                console.log(error, video)
+                console.log(error)
             }
         })
         return parsedVideos;

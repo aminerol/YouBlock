@@ -45,13 +45,13 @@ export default class ResultScreen extends React.Component {
     }
 
     componentDidMount() {
-      this.fetchData();
+      this.fetchData(false);
     }
 
-    fetchData = () => {
+    fetchData = (pagination) => {
       if (!this.inProgressNetworkReq) {
         this.inProgressNetworkReq = true;
-        YoutubeAPI.search(this.props.navigation.getParam('searchText')).then(videos => {
+        YoutubeAPI.search(this.props.navigation.getParam('searchText'), pagination).then(videos => {
           var result = _.uniqBy([...this.state.videos, ...videos], 'id');
           this.setState((prevState, nextProps) => ({
             videos: result,
@@ -74,7 +74,7 @@ export default class ResultScreen extends React.Component {
           loadingMore: true
         }),
         () => {
-          this.fetchData();
+          this.fetchData(true);
         }
       );
     };
@@ -85,7 +85,7 @@ export default class ResultScreen extends React.Component {
           refreshing: true
         },
         () => {
-          this.fetchData();
+          this.fetchData(false);
         }
       );
     };
@@ -115,6 +115,7 @@ export default class ResultScreen extends React.Component {
     );
 
     backButtonClick = () => {
+      console.log('NAAANI')
       if(this.props.navigation){
         const resetAction = StackActions.reset({
           index: 0,
