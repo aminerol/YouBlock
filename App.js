@@ -20,10 +20,11 @@ const getTabBarIcon = (navigation, focused, tintColor) => {
   return <Ionicons name={iconName} size={25} color={tintColor} />;
 };
 
-let SearchStack = createStackNavigator(
+let MainStack = createStackNavigator(
   {
     Feed: HomeScreen,
     Search: SearchScreen,
+    Result: ResultScreen,
   },
   {
     initialRouteName: 'Feed',
@@ -36,11 +37,6 @@ let SearchStack = createStackNavigator(
     },
   }
 );
-
-let MainStack = createStackNavigator({
-  Feed: { screen: SearchStack},
-  Result: ResultScreen,
-});
 
 let bottomTab = createBottomTabNavigator(
   {
@@ -91,7 +87,6 @@ MainStack.navigationOptions = ({ navigation }) => {
     tabBarVisible,
   };
 };
-
 const AppContainer = createAppContainer(bottomTab);
 
 export default class App extends Component {

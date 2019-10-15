@@ -115,7 +115,6 @@ export default class ResultScreen extends React.Component {
     );
 
     backButtonClick = () => {
-      console.log('NAAANI')
       if(this.props.navigation){
         const resetAction = StackActions.reset({
           index: 0,

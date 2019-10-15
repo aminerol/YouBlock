@@ -14,15 +14,18 @@ var _ = require('lodash');
 
 
 export default class SearchScreen extends React.Component {
-    static navigationOptions = {
-      header: null,
+
+    static navigationOptions =({})=> {
+      return {
+        header: null,
+      };
     };
   
     state = {
       searchText: null,
       suggestions: []
     };
-
+    
     componentWillMount = () => {
       LocalStorage.get("suggestions").then(suggestions => {
         const result = _.transform(suggestions, function(result, value) {
