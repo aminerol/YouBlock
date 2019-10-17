@@ -16,8 +16,8 @@ import { Ionicons } from '@expo/vector-icons';
 const { width, height } = Dimensions.get('window');
 import YoutubeAPI from '../services/youtube';
 import HomeVideoItem from '../components/homeVideoItem';
+import LocalStorage from '../services/localStorage';
 var _ = require('lodash');
-
 
 export default class HomeScreen extends React.Component {
 
@@ -56,20 +56,32 @@ export default class HomeScreen extends React.Component {
         ),
     });
 
-    fetchData = (pagination) => {
+    fetchData = (pagination, isReload) => {
       if (!this.inProgressNetworkReq) {
         this.inProgressNetworkReq = true;
-        YoutubeAPI.getHomeVideos(pagination).then(videos => {
+        YoutubeAPI.getHomeVideos(pagination, isReload).then(videos => {
           var result = _.uniqBy([...this.state.videos, ...videos], 'id');
-          this.setState((prevState, nextProps) => ({
-            videos: result,
-            loading: false,
-            loadingMore: false,
-            refreshing: false
-          }));
-          this.inProgressNetworkReq = false;
+
+          LocalStorage.get(["blockedVideos", "blockedChannels"]).then(blockedContent => {
+            
+            _.intersectionWith(result, blockedContent[0], (x,y) => {
+              _.merge(x, x.id === y.id && {'blocked': true})
+            });
+            _.intersectionWith(result, blockedContent[1], (x,y) => {
+              _.merge(x, x.owner.id === y.owner.id && {'owner': {'blocked': true}})
+            });
+            
+            this.setState((prevState, nextProps) => ({
+              videos: result,
+              loading: false,
+              loadingMore: false,
+              refreshing: false
+            }));
+            this.inProgressNetworkReq = false;
+          })
+
         }).catch(error => {
-          console.log(error);
+          console.error(error);
           this.setState({ error, loading: false });
           this.inProgressNetworkReq = false;
         });
@@ -82,7 +94,7 @@ export default class HomeScreen extends React.Component {
           loadingMore: true
         }),
         () => {
-          this.fetchData(true);
+          this.fetchData(true, false);
         }
       );
     };
@@ -93,7 +105,7 @@ export default class HomeScreen extends React.Component {
           refreshing: true
         },
         () => {
-          this.fetchData(false);
+          this.fetchData(false, true);
         }
       );
     };
@@ -123,7 +135,7 @@ export default class HomeScreen extends React.Component {
     );
 
     componentDidMount() {
-      this.fetchData(false);
+      this.fetchData(false, false);
     }
 
     render() {
