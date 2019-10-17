@@ -1,31 +1,149 @@
 import React, { PureComponent } from 'react';
-import { View, Text, StyleSheet, Image } from 'react-native';
+import { View, Text, StyleSheet, Image, Animated,} from 'react-native';
 import FastImage from 'react-native-fast-image-expo'
+import { MaterialIcons, Ionicons } from '@expo/vector-icons';
+import LocalStorage from '../services/localStorage';
 import ActionSheet from './actionSheet'
+import DoubleTap from './doubleTap'
+const AnimatedIcon = Animated.createAnimatedComponent(Ionicons);
+var _ = require('lodash');
 
 export default class HomeVideoItem extends PureComponent {
+
+  animatedValue = new Animated.Value(0);
+
   constructor(props) {
     super(props);
+    this.video = this.props.video;
+    this.cuurentOverlay  = 'none';
     this.state = {
-    };
+      isVideoBlocked: this.video.blocked,
+      isChannelBlocked: this.video.owner.blocked
+    }
+  }
+
+  _handleVideoBlocking = () => {
+    this.cuurentOverlay = 'video';
+    const mergedObject = _.merge(this.video, {type: 'video'})
+    this.setState((state) => {
+      const newBlocked = !state.isVideoBlocked;
+      if (newBlocked) {
+        LocalStorage.push("blockedVideos", mergedObject, true, (item) => {return item.id === mergedObject.id})
+        Animated.sequence([
+          Animated.spring(this.animatedValue, { toValue: 1 }),
+          Animated.spring(this.animatedValue, { toValue: 0 }),
+        ]).start();
+      } else {
+        LocalStorage.pop("blockedVideos", mergedObject.id, 'id')
+      }
+      return { isVideoBlocked: newBlocked };
+    });
+  };
+  
+
+  _handleChannelBlocking = () => {
+    this.cuurentOverlay = 'channel';
+    const mergedObject = _.merge(this.video, {type: 'channel'})
+    this.setState((state) => {
+      const newBlocked = !state.isChannelBlocked;
+      if (newBlocked) {
+        LocalStorage.push("blockedChannels", mergedObject, true, (item) => {return item.owner.id === mergedObject.owner.id})
+        Animated.sequence([
+          Animated.spring(this.animatedValue, { toValue: 1 }),
+          Animated.spring(this.animatedValue, { toValue: 0 }),
+        ]).start();
+      } else {
+        LocalStorage.pop("blockedChannels", mergedObject.owner.id, 'owner.id')
+      }
+      return { isChannelBlocked: newBlocked };
+    });
+  };
+
+  _renderOverlay = () => {
+    const imageStyles = [
+      styles.overlayHeart,
+      {
+        opacity: this.animatedValue,
+        transform: [
+          {
+            scale: this.animatedValue.interpolate({
+              inputRange: [0, 1],
+              outputRange: [0.7, 1.5],
+            }),
+          },
+        ],
+      },
+    ];
+    return this.cuurentOverlay == 'video' ? (
+            <View style={styles.overlay}>
+              <AnimatedIcon name="md-eye-off" size={100} color="#FF0000" style={imageStyles}/>
+            </View>
+          ) : (
+            <View style={styles.overlay}>
+              <AnimatedIcon name="md-lock" size={100} color="#FF0000" style={imageStyles}/>
+            </View>
+          )
   }
 
   render() {
-    const video = this.props.video;
+    const video = this.video;
     return (
       <View style={styles.container}>
-          <Image source={{ uri: video.thumbnail }} style={{ height: 200 }} resizeMode="stretch" />
+          <DoubleTap 
+            onTaps={[
+              { count: 2, action: this._handleVideoBlocking },
+              { count: 3, action: this._handleChannelBlocking }
+            ]}
+            >
+            <View>
+              <Image source={{ uri: video.thumbnail }} style={{ height: 200 }} resizeMode="stretch" />
+              {this._renderOverlay()}
+            </View>
+          </DoubleTap>
           <View style={styles.descContainer}>
-              <Image source={{ uri: video.owner.thumbnail }} style={{ width: 36, height: 36, borderRadius: 18 }} />
+              <Image source={{ uri: video.owner.thumbnail }} style={{ width: 50, height: 50, borderRadius: 25 }} />
               <View style={styles.videoDetails}>
                   <Text numberOfLines={2} includeFontPadding={false} style={styles.videoTitle}>{video.title}</Text>
-                  <View style={{flexDirection: 'row', flex: 1}}>
+                  <View style={{flexDirection: 'column', flex: 1, flexWrap: 'wrap'}}>
                     <Text numberOfLines={2} includeFontPadding={false} style={styles.videoStats}>
                       {video.owner.name + ' • ' + video.views+ ' • ' + video.publishedTime}
                     </Text>
+                    <View style={{flexDirection: 'row', flex: 1, paddingTop: 2,}}>
+                      {
+                        this.state.isVideoBlocked ?
+                          <Ionicons name="md-eye-off" size={25} color="#FF0000"/>
+                        :
+                          <Ionicons name="md-eye" size={25} color="#606060"/>
+                      }
+                      <View style={{paddingHorizontal: 8}} />
+                      {
+                        this.state.isChannelBlocked ?
+                          <Ionicons name="md-lock" size={23} color="#FF0000"/>
+                        :
+                          <Ionicons name="md-unlock" size={23} color="#606060"/>
+                      }
+                    </View>
                   </View>
               </View>
-              <ActionSheet video={video}/>
+              <ActionSheet 
+                cancelButtonIndex={2}
+                options={
+                  [ this.state.isVideoBlocked ? 'Unblock Video' : 'Block Video', 
+                    this.state.isChannelBlocked ? 'Unblock Channel' : 'Block Channel',
+                    'Cancel'
+                  ]
+                }
+                childrens={[
+                  <MaterialIcons key={'visibility-off'} name={'visibility-off'} size={24} />,
+                  <MaterialIcons key={'lock'} name={'lock'} size={24} />,
+                  <MaterialIcons key={'close'} name='close' size={24} />
+                ]}
+                actions={
+                  [ this._handleVideoBlocking, 
+                    this._handleChannelBlocking,
+                  ]                  
+                }
+              />
           </View>
       </View>
     )
@@ -45,6 +163,7 @@ const styles = StyleSheet.create({
     fontFamily: 'Roboto-Regular',
     color: '#333333',
     fontSize: 14,
+    textAlign: 'left',
     lineHeight: parseInt(14 * 1.2, 10),
   },
   videoDetails: {
@@ -55,6 +174,18 @@ const styles = StyleSheet.create({
     fontFamily: 'Roboto-Regular',
     color: '#606060',
     fontSize: 12,
+    textAlign: 'left',
     paddingTop: 2
-  }
+  },
+  overlay: {
+    position: 'absolute',
+    alignItems: 'center',
+    justifyContent: 'center',
+    left: 0,
+    right: 0,
+    top: 0,
+    bottom: 0,
+  },
+  overlayHeart: {
+  },
 });
