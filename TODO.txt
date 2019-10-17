@@ -5,3 +5,6 @@
 - change the deault flatlist with optimized and fast
 - make more tests for youtube api, cause is still not that mature yet
 - make the requests to innertube api faster(cutting not needing infos, also some encoding)
+- fix the video stats label when channel name have mixed languages
+- wrap the the video stats on search result screen
+- on search or home videos add if video or channel belongs to tha video blocked show the eye-off icon
