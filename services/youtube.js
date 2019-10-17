@@ -5,6 +5,7 @@ const BASE_URL = 'https://youtubei.googleapis.com/youtubei/v1';
 class youtubeAPI {
     constructor() {
         this.homeContinuationToken = '';
+        this.homeReloadToken = '';
         this.searchContinuationToken = '';
         this.headers = new Headers({
             'User-Agent': 'com.google.android.apps.youtube.mango/2.29.52(Linux; U; Android 6.0.1; fr_FR; SM-G532F Build/MMB29T) gzip',
@@ -22,10 +23,12 @@ class youtubeAPI {
         }
     }
 
-    async getHomeVideos(pagination){
+    async getHomeVideos(pagination, isReload){
         try {
             if(!pagination)
-                this.homeContinuationToken = ''
+                this.homeContinuationToken = '';
+            if(isReload)
+                this.homeContinuationToken = this.homeReloadToken;
             const response = await fetch(`${BASE_URL}/browse?key=${API_KEY}`, {
                 method: 'POST',
                 headers: this.headers,
@@ -52,6 +55,9 @@ class youtubeAPI {
                     this.headers.set('X-Goog-Visitor-Id', json.responseContext.visitorData ? json.responseContext.visitorData : '')
                 }else{
                     sectionListRenderer = json.continuationContents.sectionListContinuation;
+                }
+                if (sectionListRenderer.continuations[1].reloadContinuationData) {
+                    this.homeReloadToken = sectionListRenderer.continuations[1].reloadContinuationData.continuation;
                 }
                 if(sectionListRenderer.continuations[0].nextContinuationData)
                 {
@@ -101,22 +107,26 @@ class youtubeAPI {
                        }
                     },
                     "query":query,
-                    "search_filter": 'video',
                     ...(this.searchContinuationToken != '' && {'continuation': this.searchContinuationToken}),
                 }),
             });
             const data = await this.status(response);
-            var json = await data.text();
-            json = JSON.parse(json);
-            
+            var json = await data.json();
             if (json != null) {
-                
                 contents = {};
                 continuations = {};
                 if(this.searchContinuationToken == ''){
-                    const sectionListRenderer = _.pullAt(json.contents.sectionListRenderer.contents, [0, 2]);
-                    continuations = sectionListRenderer[1].itemSectionRenderer.continuations;
-                    contents = _.concat(sectionListRenderer[0].itemSectionRenderer.contents, sectionListRenderer[1].itemSectionRenderer.contents);
+                    
+                    sectionListRenderer = {}
+                    if (json.contents.sectionListRenderer.contents.length > 1) {
+                        sectionListRenderer = _.pullAt(json.contents.sectionListRenderer.contents, [0, 2]);
+                        continuations = sectionListRenderer[1].itemSectionRenderer.continuations;
+                        contents = _.concat(sectionListRenderer[0].itemSectionRenderer.contents, sectionListRenderer[1].itemSectionRenderer.contents);
+                    }else{
+                        sectionListRenderer = json.contents.sectionListRenderer.contents;
+                        continuations = sectionListRenderer[0].itemSectionRenderer.continuations;
+                        contents = sectionListRenderer[0].itemSectionRenderer.contents;
+                    }
                     this.headers.set('X-Goog-Visitor-Id', json.responseContext.visitorData ? json.responseContext.visitorData : '')
                 }else{
                     const sectionListRenderer = json.continuationContents.itemSectionContinuation
@@ -160,7 +170,7 @@ class youtubeAPI {
                         duration: _.first(video.thumbnailOverlays).thumbnailOverlayTimeStatusRenderer.text.runs[0].text
                     };
                 } catch (error) {
-                    console.log(error, video)
+                    console.log(error)
                 }
             })
         });
@@ -185,7 +195,7 @@ class youtubeAPI {
                         username: shortBylineText.navigationEndpoint.browseEndpoint.canonicalBaseUrl,
                         thumbnail: _.last(video.channelThumbnail.thumbnails).url
                     },
-                    views: _.first(video.shortViewCountText.runs).text,
+                    views: video.shortViewCountText ? _.first(video.shortViewCountText.runs).text : '',
                     duration: _.first(video.thumbnailOverlays).thumbnailOverlayTimeStatusRenderer.text.runs[0].text
                 };
             } catch (error) {
