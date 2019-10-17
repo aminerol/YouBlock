@@ -1,6 +1,7 @@
 import ResultScreen from './screens/searchResult';
 import SearchScreen from './screens/search';
 import HomeScreen from './screens/home';
+import BlockedScreen from './screens/blocked'
 import { fromRight } from 'react-navigation-transitions';
 import {Image} from 'react-native';
 import React, { Component } from 'react';
@@ -16,6 +17,8 @@ const getTabBarIcon = (navigation, focused, tintColor) => {
     iconName = 'md-home';
   } else if (routeName === 'Settings') {
     iconName = 'ios-options';
+  } else if (routeName === 'Blocked') {
+    iconName = 'md-filing';
   }
   return <Ionicons name={iconName} size={25} color={tintColor} />;
 };
@@ -38,12 +41,24 @@ let MainStack = createStackNavigator(
   }
 );
 
+const BlockedStack = createStackNavigator({
+  Blocked: {
+    screen: BlockedScreen,
+  },
+});
+
 let bottomTab = createBottomTabNavigator(
   {
     Home: {
       screen: MainStack,
       navigationOptions: {
         tabBarLabel: 'Home',
+      },
+    },
+    Blocked: {
+      screen: BlockedStack,
+      navigationOptions: {
+        tabBarLabel: 'Library',
       },
     },
   },
