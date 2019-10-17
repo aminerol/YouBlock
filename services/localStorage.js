@@ -107,9 +107,10 @@ class LocalStorage {
 	 * @param {String} key They key
 	 * @param {Any} value The value to push onto the array
      * @param {Boolean} [isExist=false] check existance before pushing onto array, if its false it wont check for existance
+     * @param {Function} [predicate] The function invoked per element.
 	 * @return {Promise}
 	 */
-	async push(key, value, isExist=false) {
+	async push(key, value, isExist=false, predicate) {
         try {
             const currentValue = await this.get(key)
             
@@ -118,10 +119,19 @@ class LocalStorage {
                 return await this.save(key, [value]);
             }
             if (Array.isArray(currentValue)) {
-                var newValue = [...currentValue, value]
-                if(isExist)
-                    newValue = Array.from(new Set(newValue))
-                return await this.save(key, newValue);
+
+                let exist = false
+                if(isExist) {
+                    if (predicate) {
+                        exist = _.some(currentValue, (item) => predicate(item));
+                    } else {
+                        exist = _.some(currentValue, function(item) {return item === value});
+                    }
+                }
+                if(!exist)
+                    return await this.save(key, [...currentValue, value]);
+                else
+                    return
             }
             throw new Error(`Existing value for key "${key}" must be of type null or Array, received ${typeof currentValue}.`);
         } catch (error) {
@@ -132,18 +142,24 @@ class LocalStorage {
     /**
 	 * delete an item from an array stored in AsyncStorage by its value
 	 * @param {String} key They key
-	 * @param {Any} value The value to delete from the array
+	 * @param {Any} value The value to delete from the array of string, if array of objects is the value to match with
+     * @param {String|Array} [path] The path of the property to get.
 	 * @return {Promise}
 	 */
-	async pop(key, value) {
+	async pop(key, value, path) {
         try {
             const currentValue = await this.get(key)
             
             if (currentValue === null) {
-                throw new Error(`There is no Array with key  "${key}" stored, received ${typeof currentValue}.`);
+                throw new Error(`There is no Array with key "${key}" stored, received ${typeof currentValue}.`);
             }
             if (Array.isArray(currentValue)) {
-                _.remove(currentValue, function(v) { return v === value; })
+                if(path) {
+                    _.remove(currentValue, [path, value])
+                }
+                else {
+                    _.remove(currentValue, function(v) { return v === value; })
+                }
                 return await this.save(key, currentValue);
             }
             throw new Error(`Existing value for key "${key}" must be of type null or Array, received ${typeof currentValue}.`);
