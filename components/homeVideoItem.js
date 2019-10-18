@@ -106,7 +106,7 @@ export default class HomeVideoItem extends PureComponent {
                   <Text numberOfLines={2} includeFontPadding={false} style={styles.videoTitle}>{video.title}</Text>
                   <View style={{flexDirection: 'column', flex: 1, flexWrap: 'wrap'}}>
                     <Text numberOfLines={2} includeFontPadding={false} style={styles.videoStats}>
-                      {video.owner.name + ' • ' + video.views+ ' • ' + video.publishedTime}
+                      {video.owner.name + '\u0009 •' + video.views+ ' • ' + video.publishedTime}
                     </Text>
                     <View style={{flexDirection: 'row', flex: 1, paddingTop: 2,}}>
                       {
