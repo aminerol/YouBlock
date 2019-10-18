@@ -11,6 +11,7 @@ import { BackHandler } from 'react-native';
 import { withNavigation, NavigationActions, StackActions } from 'react-navigation';
 import SearchVideoItem from '../components/searchVideoItem';
 import YoutubeAPI from '../services/youtube';
+import LocalStorage from '../services/localStorage';
 const { width, height } = Dimensions.get('window');
 var _ = require('lodash');
 
@@ -53,15 +54,28 @@ export default class ResultScreen extends React.Component {
         this.inProgressNetworkReq = true;
         YoutubeAPI.search(this.props.navigation.getParam('searchText'), pagination).then(videos => {
           var result = _.uniqBy([...this.state.videos, ...videos], 'id');
-          this.setState((prevState, nextProps) => ({
-            videos: result,
-            loading: false,
-            loadingMore: false,
-            refreshing: false
-          }));
-          this.inProgressNetworkReq = false;
+
+          LocalStorage.get(["blockedVideos", "blockedChannels"]).then(blockedContent => {
+            
+            _.intersectionWith(result, blockedContent[0], (x,y) => {
+              _.merge(x, x.id === y.id && {'blocked': true})
+            });
+            _.intersectionWith(result, blockedContent[1], (x,y) => {
+              _.merge(x, x.owner.id === y.owner.id && {'owner': {'blocked': true}})
+            });
+            
+            this.setState((prevState, nextProps) => ({
+              videos: result,
+              loading: false,
+              loadingMore: false,
+              refreshing: false
+            }));
+            this.inProgressNetworkReq = false;
+          })
+          
+          
         }).catch(error => {
-          console.log(error);
+          console.error(error);
           this.setState({ error, loading: false });
           this.inProgressNetworkReq = false;
         });
