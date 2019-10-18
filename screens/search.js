@@ -123,10 +123,12 @@ export default class SearchScreen extends React.Component {
     }
 
     onSubmit = (searchText) =>{
-      LocalStorage.push("suggestions", searchText, true)
-      this.props.navigation.navigate('Result', {
-        searchText: searchText,
-      })
+      if(!_.isEmpty(searchText)){
+        LocalStorage.push("suggestions", searchText, true)
+        this.props.navigation.navigate('Result', {
+          searchText: searchText,
+        })
+      }
     }
 
     render() {
