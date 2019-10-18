@@ -59,7 +59,7 @@ class youtubeAPI {
                 if (sectionListRenderer.continuations[1].reloadContinuationData) {
                     this.homeReloadToken = sectionListRenderer.continuations[1].reloadContinuationData.continuation;
                 }
-                if(sectionListRenderer.continuations[0].nextContinuationData)
+                if(sectionListRenderer.continuations && sectionListRenderer.continuations[0].nextContinuationData)
                 {
                     this.homeContinuationToken = sectionListRenderer.continuations[0].nextContinuationData.continuation;
                     const videos = this.parseHomeVideos(sectionListRenderer.contents);
@@ -133,7 +133,7 @@ class youtubeAPI {
                     continuations = sectionListRenderer.continuations;
                     contents = sectionListRenderer.contents
                 }
-                if(continuations[0].nextContinuationData)
+                if(continuations && continuations[0].nextContinuationData)
                 {
                     this.searchContinuationToken = continuations[0].nextContinuationData.continuation;
                     const videos = this.parseSearchVideos(contents);
