@@ -16,6 +16,7 @@ import { Ionicons } from '@expo/vector-icons';
 const { width, height } = Dimensions.get('window');
 import YoutubeAPI from '../services/youtube';
 import HomeVideoItem from '../components/homeVideoItem';
+import EmptyContent from '../components/emptyContent';
 import LocalStorage from '../services/localStorage';
 var _ = require('lodash');
 
@@ -70,7 +71,7 @@ export default class HomeScreen extends React.Component {
             _.intersectionWith(result, blockedContent[1], (x,y) => {
               _.merge(x, x.owner.id === y.owner.id && {'owner': {'blocked': true}})
             });
-            
+
             this.setState((prevState, nextProps) => ({
               videos: result,
               loading: false,
@@ -141,19 +142,22 @@ export default class HomeScreen extends React.Component {
     render() {
       return (
         !this.state.loading ? (
-          <View style={styles.headerLayoutStyle}>
-            <FlatList
-              data={this.state.videos}
-              renderItem={this._renderItem}
-              keyExtractor={item => item.id.toString()}
-              ListFooterComponent={this._renderFooter}
-              onRefresh={this._handleRefresh}
-              refreshing={this.state.refreshing}
-              onEndReached={this._handleLoadMore}
-              onEndReachedThreshold={0.5}
-              initialNumToRender={10}
-            />
-          </View>
+          !_.isEmpty(this.state.videos) ?
+            <View style={styles.headerLayoutStyle}>
+              <FlatList
+                data={this.state.videos}
+                renderItem={this._renderItem}
+                keyExtractor={item => item.id.toString()}
+                ListFooterComponent={this._renderFooter}
+                onRefresh={this._handleRefresh}
+                refreshing={this.state.refreshing}
+                onEndReached={this._handleLoadMore}
+                onEndReachedThreshold={0.5}
+                initialNumToRender={10}
+              />
+            </View> 
+          : 
+            (<EmptyContent />)
         ) : (
           <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center'}} >
             <ActivityIndicator size="large" color={'#007aff'} />

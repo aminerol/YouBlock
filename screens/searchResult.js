@@ -10,6 +10,7 @@ import {
 import { BackHandler } from 'react-native';
 import { withNavigation, NavigationActions, StackActions } from 'react-navigation';
 import SearchVideoItem from '../components/searchVideoItem';
+import EmptyContent from '../components/emptyContent';
 import YoutubeAPI from '../services/youtube';
 import LocalStorage from '../services/localStorage';
 const { width, height } = Dimensions.get('window');
@@ -146,19 +147,22 @@ export default class ResultScreen extends React.Component {
       {
         return (
           !this.state.loading ? (
-            <View style={styles.headerLayoutStyle}>
-              <FlatList
-                data={this.state.videos}
-                renderItem={this._renderItem}
-                keyExtractor={item => item.id.toString()}
-                ListFooterComponent={this._renderFooter}
-                onRefresh={this._handleRefresh}
-                refreshing={this.state.refreshing}
-                onEndReached={this._handleLoadMore}
-                onEndReachedThreshold={0.5}
-                initialNumToRender={10}
-              />
-            </View>
+            !_.isEmpty(this.state.videos) ?
+              <View style={styles.headerLayoutStyle}>
+                <FlatList
+                  data={this.state.videos}
+                  renderItem={this._renderItem}
+                  keyExtractor={item => item.id.toString()}
+                  ListFooterComponent={this._renderFooter}
+                  onRefresh={this._handleRefresh}
+                  refreshing={this.state.refreshing}
+                  onEndReached={this._handleLoadMore}
+                  onEndReachedThreshold={0.5}
+                  initialNumToRender={10}
+                />
+              </View>
+            : 
+              (<EmptyContent />)
           ) : (
             <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center'}} >
               <ActivityIndicator size="large" color={'#007aff'} />
