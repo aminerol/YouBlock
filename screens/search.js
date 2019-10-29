@@ -41,7 +41,9 @@ export default class SearchScreen extends React.Component {
           const result = _.transform(queries, function(result, value) {
             result.push({'query': value, 'type': false});
           }, []);
-          this.setState({ suggestions: result })
+          if (!_.isEmpty(result)) {
+            this.setState({ suggestions: result })
+          }
         });
       }else{
         LocalStorage.get("suggestions").then(suggestions => {
