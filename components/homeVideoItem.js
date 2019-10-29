@@ -1,6 +1,6 @@
 import React, { PureComponent } from 'react';
 import { View, Text, StyleSheet, Image, Animated,} from 'react-native';
-import FastImage from 'react-native-fast-image-expo'
+import FastImage from 'react-native-fast-image'
 import { MaterialIcons, Ionicons } from '@expo/vector-icons';
 import LocalStorage from '../services/localStorage';
 import ActionSheet from './actionSheet'
@@ -95,8 +95,8 @@ export default class HomeVideoItem extends PureComponent {
               { count: 3, action: this._handleChannelBlocking }
             ]}
             >
-            <View>
-              <Image source={{ uri: video.thumbnail }} style={{ height: 200 }} resizeMode="stretch" />
+            <View style={[styles.shadowsStyling, {paddingHorizontal: 5,}]}>
+              <Image source={{ uri: video.thumbnail }} style={{ height: 200, borderRadius: 5 }} resizeMode="stretch" />
               {this._renderOverlay()}
             </View>
           </DoubleTap>
@@ -106,7 +106,7 @@ export default class HomeVideoItem extends PureComponent {
                   <Text numberOfLines={2} includeFontPadding={false} style={styles.videoTitle}>{video.title}</Text>
                   <View style={{flexDirection: 'column', flex: 1, flexWrap: 'wrap'}}>
                     <Text numberOfLines={2} includeFontPadding={false} style={styles.videoStats}>
-                      {video.owner.name + '\u0009 •' + video.views+ ' • ' + video.publishedTime}
+                      {video.owner.name + '\u0009 • ' + video.views+ ' • ' + video.publishedTime}
                     </Text>
                     <View style={{flexDirection: 'row', flex: 1, paddingTop: 2,}}>
                       {
@@ -152,8 +152,7 @@ export default class HomeVideoItem extends PureComponent {
 
 const styles = StyleSheet.create({
   container: {
-    paddingTop: 5,
-    paddingBottom: 10,
+    paddingBottom: 5,
   },
   descContainer: {
       flexDirection: 'row',
@@ -188,4 +187,13 @@ const styles = StyleSheet.create({
   },
   overlayHeart: {
   },
+  shadowsStyling: {
+    shadowColor: "#000000",
+    shadowOpacity: 0.8,
+    shadowRadius: 2,
+    shadowOffset: {
+      height: 1,
+      width: 0
+    }
+}
 });
