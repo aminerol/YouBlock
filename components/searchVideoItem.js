@@ -1,10 +1,11 @@
 import React, { PureComponent } from 'react';
 import { View, Text, StyleSheet, Image, TouchableOpacity, Dimensions, Animated } from 'react-native';
-import FastImage from 'react-native-fast-image-expo'
+import FastImage from 'react-native-fast-image'
 import { MaterialIcons, Ionicons } from '@expo/vector-icons';
 import LocalStorage from '../services/localStorage';
 import ActionSheet from './actionSheet'
 import DoubleTap from './doubleTap'
+import LogUtils from '../utils/LogUtils';
 const AnimatedIcon = Animated.createAnimatedComponent(Ionicons);
 var _ = require('lodash');
 const { width, height } = Dimensions.get('window');
@@ -87,18 +88,18 @@ export default class SearchVideoItem extends PureComponent {
           )
   }
 
-  render() {
+  render() { 
     const video = this.video;
     return (
       <View style={styles.container}>
-      <DoubleTap 
+          <DoubleTap 
             onTaps={[
               { count: 2, action: this._handleVideoBlocking },
               { count: 3, action: this._handleChannelBlocking }
             ]}
             >
-            <View>
-              <Image source={{ uri: video.thumbnail }}  style={{width: 160, height: 120}}/>
+            <View style={{flex: 1}}>
+              <Image ref={component => { this.thumbnailImage = component; }} source={{ uri: video.thumbnail }}  style={{flex: 1,}} resizeMode='stretch'/>
               {this._renderOverlay()}
             </View>
           </DoubleTap>
@@ -128,25 +129,25 @@ export default class SearchVideoItem extends PureComponent {
             
         </View>
         <View>
-        <ActionSheet 
-          cancelButtonIndex={2}
-          options={
-            [ this.state.isVideoBlocked ? 'Unblock Video' : 'Block Video', 
-              this.state.isChannelBlocked ? 'Unblock Channel' : 'Block Channel',
-              'Cancel'
-            ]
-          }
-          childrens={[
-            <MaterialIcons key={'visibility-off'} name={'visibility-off'} size={24} />,
-            <MaterialIcons key={'lock'} name={'lock'} size={24} />,
-            <MaterialIcons key={'close'} name='close' size={24} />
-          ]}
-          actions={
-            [ this._handleVideoBlocking, 
-              this._handleChannelBlocking,
-            ]                  
-          }
-        />
+          <ActionSheet 
+            cancelButtonIndex={2}
+            options={
+              [ this.state.isVideoBlocked ? 'Unblock Video' : 'Block Video', 
+                this.state.isChannelBlocked ? 'Unblock Channel' : 'Block Channel',
+                'Cancel'
+              ]
+            }
+            childrens={[
+              <MaterialIcons key={'visibility-off'} name={'visibility-off'} size={24} />,
+              <MaterialIcons key={'lock'} name={'lock'} size={24} />,
+              <MaterialIcons key={'close'} name='close' size={24} />
+            ]}
+            actions={
+              [ this._handleVideoBlocking, 
+                this._handleChannelBlocking,
+              ]                  
+            }
+          />
         </View>
       </View>
     )
