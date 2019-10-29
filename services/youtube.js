@@ -56,7 +56,7 @@ class youtubeAPI {
                 }else{
                     sectionListRenderer = json.continuationContents.sectionListContinuation;
                 }
-                if (sectionListRenderer.continuations[1].reloadContinuationData) {
+                if (sectionListRenderer.continuations[1] && sectionListRenderer.continuations[1].reloadContinuationData) {
                     this.homeReloadToken = sectionListRenderer.continuations[1].reloadContinuationData.continuation;
                 }
                 if(sectionListRenderer.continuations && sectionListRenderer.continuations[0].nextContinuationData)
