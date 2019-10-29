@@ -20,7 +20,7 @@ const APPBAR_HEIGHT = Platform.OS === 'ios' ? 50 : 56;
 const TITLE_OFFSET = Platform.OS === 'ios' ? 70 : 56;
 
 const ANDROID_STATUS_BAR_HEIGHT = getStatusBarHeight ? getStatusBarHeight() : StatusBar.currentHeight;
-const STATUSBAR_HEIGHT = Platform.OS === 'ios' ? (hasNotch ? 40 : 25) : ANDROID_STATUS_BAR_HEIGHT;
+export const STATUSBAR_HEIGHT = Platform.OS === 'ios' ? (hasNotch ? 40 : 25) : ANDROID_STATUS_BAR_HEIGHT;
 
 export default class Header extends React.PureComponent {
   constructor(props) {
