@@ -7,7 +7,6 @@ import {
   Image,
   TouchableOpacity,
   Dimensions,
-  FlatList,
   ActivityIndicator
 } from 'react-native';
 import { BorderlessButton } from 'react-native-gesture-handler';
@@ -17,7 +16,9 @@ const { width, height } = Dimensions.get('window');
 import YoutubeAPI from '../services/youtube';
 import HomeVideoItem from '../components/homeVideoItem';
 import EmptyContent from '../components/emptyContent';
+import FlatListEx, {RefreshState} from '../components/FlatList';
 import LocalStorage from '../services/localStorage';
+import { getNavBarHeight } from 'react-native-iphone-x-helper';
 var _ = require('lodash');
 
 export default class HomeScreen extends React.Component {
@@ -28,9 +29,8 @@ export default class HomeScreen extends React.Component {
         videos: [],
         count: 0,
         loading: true,
-        loadingMore: false,
-        refreshing: false,
-        error: null
+        listState: RefreshState.Idle,
+        error: null,
       };
       this.inProgressNetworkReq = false;
     }
@@ -38,7 +38,7 @@ export default class HomeScreen extends React.Component {
     static navigationOptions = ({ navigation }) => ({
         headerLeft: (
             <View style={{flex:1, flexDirection:'row', justifyContent: 'center', paddingHorizontal: 10}}>
-                <Image source={require('../assets/logo.png')} style={{width:100, height:30}} resizeMode='contain' />
+                <Image source={require('../assets/logo.png')} style={{width:100, height:getNavBarHeight()}} resizeMode='contain' />
             </View>
         ),
         headerRight: (
@@ -57,6 +57,10 @@ export default class HomeScreen extends React.Component {
         ),
     });
 
+    componentDidMount() {
+      this.fetchData(false, false);
+    }
+
     fetchData = (pagination, isReload) => {
       if (!this.inProgressNetworkReq) {
         this.inProgressNetworkReq = true;
@@ -70,20 +74,28 @@ export default class HomeScreen extends React.Component {
             });
             _.intersectionWith(result, blockedContent[1], (x,y) => {
               _.merge(x, x.owner.id === y.owner.id && {'owner': {'blocked': true}})
-            });
-
-            this.setState((prevState, nextProps) => ({
-              videos: result,
-              loading: false,
-              loadingMore: false,
-              refreshing: false
-            }));
-            this.inProgressNetworkReq = false;
+            });         
           })
+
+          let currentListState = {}
+          if(pagination && _.isEmpty(videos)){
+            currentListState = RefreshState.NoMoreData
+          }else if (!pagination && _.isEmpty(videos)){
+            currentListState = RefreshState.EmptyData
+          }else{
+            currentListState = RefreshState.Idle
+          }
+
+          this.setState({
+            videos: result,
+            loading: false,
+            listState: currentListState,
+          })
+          this.inProgressNetworkReq = false;
 
         }).catch(error => {
           console.error(error);
-          this.setState({ error, loading: false });
+          this.setState({loading: false, listState: RefreshState.Failure, error: error})
           this.inProgressNetworkReq = false;
         });
       }
@@ -91,9 +103,9 @@ export default class HomeScreen extends React.Component {
 
     _handleLoadMore = () => {
       this.setState(
-        (prevState, nextProps) => ({
-          loadingMore: true
-        }),
+        {
+          listState: RefreshState.FooterRefreshing
+        },
         () => {
           this.fetchData(true, false);
         }
@@ -103,7 +115,7 @@ export default class HomeScreen extends React.Component {
     _handleRefresh = () => {
       this.setState(
         {
-          refreshing: true
+          listState: RefreshState.HeaderRefreshing
         },
         () => {
           this.fetchData(false, true);
@@ -111,53 +123,50 @@ export default class HomeScreen extends React.Component {
       );
     };
 
-    _renderFooter = () => {
-      if (!this.state.loadingMore) return null;
+    _renderLoadingMore = () => {
       return (
-        <View
-          style={{
-            position: 'relative',
-            width: width,
-            height: height,
-            paddingVertical: 20,
-            borderTopWidth: 1,
-            marginTop: 10,
-            marginBottom: 10,
-            borderColor: '#E5E5E5'
-          }}
-        >
-          <ActivityIndicator style={{ margin: 10 }} size="large" color={'#007aff'} />
+        <ActivityIndicator style={{ margin: 10 }} size="large" color={'#007aff'} />
+      )
+    };
+
+    _renderNoMoreData = () => {
+      return (
+        <Text style={styles.subHeadline}>
+          No More Results
+        </Text>
+      )
+    };
+
+    _renderEmptyData = () => {
+      return (
+        <View style={{height}}>
+          <EmptyContent />
         </View>
-      );
+      )
     };
 
     _renderItem = ({item}) => (
       <HomeVideoItem video={item} />
     );
 
-    componentDidMount() {
-      this.fetchData(false, false);
-    }
-
     render() {
       return (
         !this.state.loading ? (
-          !_.isEmpty(this.state.videos) ?
-            <View style={styles.headerLayoutStyle}>
-              <FlatList
-                data={this.state.videos}
-                renderItem={this._renderItem}
-                keyExtractor={item => item.id.toString()}
-                ListFooterComponent={this._renderFooter}
-                onRefresh={this._handleRefresh}
-                refreshing={this.state.refreshing}
-                onEndReached={this._handleLoadMore}
-                onEndReachedThreshold={0.5}
-                initialNumToRender={10}
-              />
-            </View> 
-          : 
-            (<EmptyContent />)
+          <View style={styles.headerLayoutStyle}>
+              <FlatListEx
+                  data={this.state.videos}
+                  renderItem={this._renderItem}
+                  keyExtractor={item => item.id.toString()}
+
+                  refreshState={this.state.listState}
+                  onHeaderRefresh={this._handleRefresh}
+                  onFooterRefresh={this._handleLoadMore}
+
+                  footerRefreshingComponent={this._renderLoadingMore()}
+                  footerNoMoreDataComponent={this._renderNoMoreData()}
+                  footerEmptyDataComponent={this._renderEmptyData()}
+                />
+            </View>
         ) : (
           <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center'}} >
             <ActivityIndicator size="large" color={'#007aff'} />
@@ -169,8 +178,14 @@ export default class HomeScreen extends React.Component {
 
 const styles = StyleSheet.create({
     headerLayoutStyle: {
-      width, 
-      height,
+      flex: 1,
       paddingTop: 6,
     },
+    subHeadline: {
+      fontFamily: 'Roboto-Regular',
+      color: '#606060',
+      fontSize: 16,
+      textAlign: 'center',
+      padding: 10
+    }
 });

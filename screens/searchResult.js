@@ -3,7 +3,6 @@ import {
   Text,
   StyleSheet,
   View,
-  FlatList,
   Dimensions,
   ActivityIndicator
 } from 'react-native';
@@ -11,6 +10,7 @@ import { BackHandler } from 'react-native';
 import { withNavigation, NavigationActions, StackActions } from 'react-navigation';
 import SearchVideoItem from '../components/searchVideoItem';
 import EmptyContent from '../components/emptyContent';
+import FlatListEx, {RefreshState} from '../components/FlatList';
 import YoutubeAPI from '../services/youtube';
 import LocalStorage from '../services/localStorage';
 const { width, height } = Dimensions.get('window');
@@ -28,12 +28,11 @@ export default class ResultScreen extends React.Component {
     constructor(props){
       super(props);
       this.state = {
+        loading: true,
         videos: [],
         count: 0,
-        loading: true,
-        loadingMore: false,
-        refreshing: false,
-        error: null
+        error: null,
+        listState: RefreshState.Idle,
       };
       this.inProgressNetworkReq = false;
     }
@@ -51,11 +50,13 @@ export default class ResultScreen extends React.Component {
     }
 
     fetchData = (pagination) => {
+      
       if (!this.inProgressNetworkReq) {
         this.inProgressNetworkReq = true;
-        YoutubeAPI.search(this.props.navigation.getParam('searchText'), pagination).then(videos => {
-          var result = _.uniqBy([...this.state.videos, ...videos], 'id');
 
+        YoutubeAPI.search(this.props.navigation.getParam('searchText'), pagination).then(videos => {
+
+          var result = _.uniqBy([...this.state.videos, ...videos], 'id');
           LocalStorage.get(["blockedVideos", "blockedChannels"]).then(blockedContent => {
             
             _.intersectionWith(result, blockedContent[0], (x,y) => {
@@ -64,65 +65,68 @@ export default class ResultScreen extends React.Component {
             _.intersectionWith(result, blockedContent[1], (x,y) => {
               _.merge(x, x.owner.id === y.owner.id && {'owner': {'blocked': true}})
             });
-            
-            this.setState((prevState, nextProps) => ({
-              videos: result,
-              loading: false,
-              loadingMore: false,
-              refreshing: false
-            }));
-            this.inProgressNetworkReq = false;
           })
+
+          let currentListState = {}
+          if(pagination && _.isEmpty(videos)){
+            currentListState = RefreshState.NoMoreData
+          }else if (!pagination && _.isEmpty(videos)){
+            currentListState = RefreshState.EmptyData
+          }else{
+            currentListState = RefreshState.Idle
+          }
+
+          this.setState({
+            videos: result,
+            loading: false,
+            listState: currentListState,
+          })
+
+          this.inProgressNetworkReq = false;
           
           
         }).catch(error => {
           console.error(error);
-          this.setState({ error, loading: false });
+          this.setState({loading: false, listState: RefreshState.Failure, error: error})
           this.inProgressNetworkReq = false;
         });
       }
     }
 
     _handleLoadMore = () => {
-      this.setState(
-        (prevState, nextProps) => ({
-          loadingMore: true
-        }),
-        () => {
-          this.fetchData(true);
-        }
-      );
+      this.setState({listState: RefreshState.FooterRefreshing}, ()=>{
+        this.fetchData(true);
+      })
+      
     };
 
     _handleRefresh = () => {
-      this.setState(
-        {
-          refreshing: true
-        },
-        () => {
-          this.fetchData(false);
-        }
-      );
+      this.setState({listState: RefreshState.HeaderRefreshing}, ()=>{
+        this.fetchData(false);
+      })
+      
     };
 
-    _renderFooter = () => {
-      if (!this.state.loadingMore) return null;
+    _renderLoadingMore = () => {
       return (
-        <View
-          style={{
-            position: 'relative',
-            width: width,
-            height: height,
-            paddingVertical: 20,
-            borderTopWidth: 1,
-            marginTop: 10,
-            marginBottom: 10,
-            borderColor: '#E5E5E5'
-          }}
-        >
-          <ActivityIndicator style={{ margin: 10 }} size="large" color={'#007aff'} />
+        <ActivityIndicator style={{ margin: 10 }} size="large" color={'#007aff'} />
+      )
+    };
+
+    _renderNoMoreData = () => {
+      return (
+        <Text style={styles.subHeadline}>
+          No More Results
+        </Text>
+      )
+    };
+
+    _renderEmptyData = () => {
+      return (
+        <View style={{height}}>
+          <EmptyContent />
         </View>
-      );
+      )
     };
 
     _renderItem = ({item}) => (
@@ -147,22 +151,21 @@ export default class ResultScreen extends React.Component {
       {
         return (
           !this.state.loading ? (
-            !_.isEmpty(this.state.videos) ?
-              <View style={styles.headerLayoutStyle}>
-                <FlatList
+            <View style={styles.headerLayoutStyle}>
+                <FlatListEx
                   data={this.state.videos}
                   renderItem={this._renderItem}
                   keyExtractor={item => item.id.toString()}
-                  ListFooterComponent={this._renderFooter}
-                  onRefresh={this._handleRefresh}
-                  refreshing={this.state.refreshing}
-                  onEndReached={this._handleLoadMore}
-                  onEndReachedThreshold={0.5}
-                  initialNumToRender={10}
+
+                  refreshState={this.state.listState}
+                  onHeaderRefresh={this._handleRefresh}
+                  onFooterRefresh={this._handleLoadMore}
+
+                  footerRefreshingComponent={this._renderLoadingMore()}
+                  footerNoMoreDataComponent={this._renderNoMoreData()}
+                  footerEmptyDataComponent={this._renderEmptyData()}
                 />
               </View>
-            : 
-              (<EmptyContent />)
           ) : (
             <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center'}} >
               <ActivityIndicator size="large" color={'#007aff'} />
@@ -175,8 +178,14 @@ export default class ResultScreen extends React.Component {
 
 const styles = StyleSheet.create({
     headerLayoutStyle: {
-      width, 
-      height,
+      flex: 1,
       paddingTop: 6,
     },
+    subHeadline: {
+      fontFamily: 'Roboto-Regular',
+      color: '#606060',
+      fontSize: 16,
+      textAlign: 'center',
+      padding: 10
+    }
 });
