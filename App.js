@@ -10,6 +10,10 @@ import { Ionicons } from '@expo/vector-icons';
 import { ActionSheetProvider } from '@expo/react-native-action-sheet';
 import { createAppContainer, createStackNavigator, createBottomTabNavigator} from 'react-navigation';
 
+if(__DEV__) {
+  import("./ReactotronConfig")
+}
+
 const getTabBarIcon = (navigation, focused, tintColor) => {
   const { routeName } = navigation.state;
   let iconName;
