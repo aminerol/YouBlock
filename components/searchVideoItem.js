@@ -6,6 +6,7 @@ import LocalStorage from '../services/localStorage';
 import ActionSheet from './actionSheet'
 import DoubleTap from './doubleTap'
 import LogUtils from '../utils/LogUtils';
+import YoutubeAPI from '../services/youtube';
 const AnimatedIcon = Animated.createAnimatedComponent(Ionicons);
 var _ = require('lodash');
 const { width, height } = Dimensions.get('window');
@@ -42,21 +43,23 @@ export default class SearchVideoItem extends PureComponent {
       return { isVideoBlocked: newBlocked };
     });
   };
-  
 
   _handleChannelBlocking = () => {
     this.cuurentOverlay = 'channel';
-    const mergedObject = _.merge(this.video, {type: 'channel'})
+    let mergedObject =  { ...this.video.owner, type: 'channel' }
     this.setState((state) => {
       const newBlocked = !state.isChannelBlocked;
       if (newBlocked) {
-        LocalStorage.push("blockedChannels", mergedObject, true, (item) => {return item.owner.id === mergedObject.owner.id})
         Animated.sequence([
           Animated.spring(this.animatedValue, { toValue: 1 }),
           Animated.spring(this.animatedValue, { toValue: 0 }),
         ]).start();
+        YoutubeAPI.getChannelInfo(mergedObject.id).then(channelInfo => {
+          mergedObject = {...mergedObject, videoCount: channelInfo.videoCount, subscriberCount: channelInfo.subscriberCount, thumbnail: channelInfo.thumbnail}
+          LocalStorage.push("blockedChannels", mergedObject, true, (item) => {return item.id === mergedObject.id})
+        })
       } else {
-        LocalStorage.pop("blockedChannels", mergedObject.owner.id, 'owner.id')
+        LocalStorage.pop("blockedChannels", mergedObject.id, 'id')
       }
       return { isChannelBlocked: newBlocked };
     });

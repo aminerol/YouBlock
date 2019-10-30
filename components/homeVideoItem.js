@@ -3,6 +3,7 @@ import { View, Text, StyleSheet, Image, Animated,} from 'react-native';
 import FastImage from 'react-native-fast-image'
 import { MaterialIcons, Ionicons } from '@expo/vector-icons';
 import LocalStorage from '../services/localStorage';
+import YoutubeAPI from '../services/youtube';
 import ActionSheet from './actionSheet'
 import DoubleTap from './doubleTap'
 const AnimatedIcon = Animated.createAnimatedComponent(Ionicons);
@@ -43,17 +44,20 @@ export default class HomeVideoItem extends PureComponent {
 
   _handleChannelBlocking = () => {
     this.cuurentOverlay = 'channel';
-    const mergedObject = _.merge(this.video, {type: 'channel'})
+    let mergedObject =  { ...this.video.owner, type: 'channel' }
     this.setState((state) => {
       const newBlocked = !state.isChannelBlocked;
       if (newBlocked) {
-        LocalStorage.push("blockedChannels", mergedObject, true, (item) => {return item.owner.id === mergedObject.owner.id})
         Animated.sequence([
           Animated.spring(this.animatedValue, { toValue: 1 }),
           Animated.spring(this.animatedValue, { toValue: 0 }),
         ]).start();
+        YoutubeAPI.getChannelInfo(mergedObject.id).then(channelInfo => {
+          mergedObject = {...mergedObject, videoCount: channelInfo.videoCount, subscriberCount: channelInfo.subscriberCount, thumbnail: channelInfo.thumbnail}
+          LocalStorage.push("blockedChannels", mergedObject, true, (item) => {return item.id === mergedObject.id})
+        })
       } else {
-        LocalStorage.pop("blockedChannels", mergedObject.owner.id, 'owner.id')
+        LocalStorage.pop("blockedChannels", mergedObject.id, 'id')
       }
       return { isChannelBlocked: newBlocked };
     });
