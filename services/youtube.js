@@ -1,5 +1,8 @@
+import LogUtils from '../utils/LogUtils';
+
 var _ = require('lodash');
-const API_KEY = 'AIzaSyA8eiZmM1FaDVjRy-df2KTyQ_vz_yYM39w';
+const millify = require('millify')
+const API_KEY = 'AIzaSyDCU8hByM-4DrUqRUYnGn-3llEO78bcxq8';
 const BASE_URL = 'https://youtubei.googleapis.com/youtubei/v1';
 
 class youtubeAPI {
@@ -88,6 +91,73 @@ class youtubeAPI {
             return Promise.resolve(queries)
         } catch (error) {
             return Promise.reject(error);
+        }
+    }
+
+    async getChannelInfoWithInnerTube(channelId){
+        try {
+            const response = await fetch(`${BASE_URL}/search?key=${API_KEY}`, {
+                method: 'POST',
+                headers: this.headers,
+                credentials: 'include',
+                body: JSON.stringify({
+                    "context":{
+                       "client":{
+                          "clientName":"ANDROID",
+                          "clientVersion":"14.33.56"
+                       }
+                    },
+                    "query":channelId,
+                }),
+            });
+            const data = await this.status(response);
+            var json = await data.json();
+            if (json != null) {
+                contents = json.contents.sectionListRenderer.contents[0].itemSectionRenderer.contents;
+                channel = _.filter(contents, 'compactChannelRenderer')[0]
+                if(!_.isEmpty(channel))
+                {
+                    channel = channel.compactChannelRenderer;
+                    return Promise.resolve({
+                        title: channel.title.runs[0].text,
+                        videoCount: channel.videoCountText.runs[0].text,
+                        subscriberCount: channel.subscriberCountText.runs[0].text,
+                        thumbnail: _.last(channel.thumbnail.thumbnails).url
+                    })
+                }else
+                    return Promise.resolve([])
+            }
+        } catch (error) {
+            return Promise.reject(error)
+        }
+    }
+
+    async getChannelInfo(channelId){
+        try {
+            ''
+            const response = await fetch(`https://www.googleapis.com/youtube/v3/channels?part=snippet,statistics,id&id=${channelId}&key=${API_KEY}`, {
+                method: 'GET',
+                headers: this.headers,
+                credentials: 'include',
+            });
+            const data = await this.status(response);
+            var json = await data.json();
+            if (json != null) {
+                snippet = json.items[0].snippet;
+                statistics = json.items[0].statistics;
+                if(!_.isEmpty(snippet))
+                {
+                    return Promise.resolve({
+                        title: snippet.title,
+                        videoCount: millify.default(statistics.videoCount),
+                        subscriberCount: millify.default(statistics.subscriberCount),
+                        thumbnail: snippet.thumbnails.medium ? snippet.thumbnails.medium.url : snippet.thumbnails.default.url
+                    })
+                }else
+                    return Promise.resolve([])
+            }
+        } catch (error) {
+            return Promise.reject(error)
         }
     }
 
