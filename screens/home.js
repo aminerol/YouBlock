@@ -19,6 +19,7 @@ import EmptyContent from '../components/emptyContent';
 import FlatListEx, {RefreshState} from '../components/FlatList';
 import LocalStorage from '../services/localStorage';
 import { getNavBarHeight } from 'react-native-iphone-x-helper';
+import LogUtils from '../utils/LogUtils';
 var _ = require('lodash');
 
 export default class HomeScreen extends React.Component {
@@ -66,32 +67,32 @@ export default class HomeScreen extends React.Component {
         this.inProgressNetworkReq = true;
         YoutubeAPI.getHomeVideos(pagination, isReload).then(videos => {
           var result = _.uniqBy([...this.state.videos, ...videos], 'id');
-
           LocalStorage.get(["blockedVideos", "blockedChannels"]).then(blockedContent => {
-            
             _.intersectionWith(result, blockedContent[0], (x,y) => {
               _.merge(x, x.id === y.id && {'blocked': true})
             });
             _.intersectionWith(result, blockedContent[1], (x,y) => {
-              _.merge(x, x.owner.id === y.owner.id && {'owner': {'blocked': true}})
-            });         
+              _.merge(x, x.owner.id === y.id && {'owner': {'blocked': true}})
+            });
+
+            let currentListState = {}
+            if(pagination && _.isEmpty(videos)){
+              currentListState = RefreshState.NoMoreData
+            }else if (!pagination && _.isEmpty(videos)){
+              currentListState = RefreshState.EmptyData
+            }else{
+              currentListState = RefreshState.Idle
+            }
+
+            this.setState({
+              videos: result,
+              loading: false,
+              listState: currentListState,
+            })
+            this.inProgressNetworkReq = false;
           })
 
-          let currentListState = {}
-          if(pagination && _.isEmpty(videos)){
-            currentListState = RefreshState.NoMoreData
-          }else if (!pagination && _.isEmpty(videos)){
-            currentListState = RefreshState.EmptyData
-          }else{
-            currentListState = RefreshState.Idle
-          }
-
-          this.setState({
-            videos: result,
-            loading: false,
-            listState: currentListState,
-          })
-          this.inProgressNetworkReq = false;
+          
 
         }).catch(error => {
           console.error(error);

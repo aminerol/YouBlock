@@ -63,28 +63,27 @@ export default class ResultScreen extends React.Component {
               _.merge(x, x.id === y.id && {'blocked': true})
             });
             _.intersectionWith(result, blockedContent[1], (x,y) => {
-              _.merge(x, x.owner.id === y.owner.id && {'owner': {'blocked': true}})
+              _.merge(x, x.owner.id === y.id && {'owner': {'blocked': true}})
             });
+
+            let currentListState = {}
+            if(pagination && _.isEmpty(videos)){
+              currentListState = RefreshState.NoMoreData
+            }else if (!pagination && _.isEmpty(videos)){
+              currentListState = RefreshState.EmptyData
+            }else{
+              currentListState = RefreshState.Idle
+            }
+
+            this.setState({
+              videos: result,
+              loading: false,
+              listState: currentListState,
+            })
+
+            this.inProgressNetworkReq = false;
           })
 
-          let currentListState = {}
-          if(pagination && _.isEmpty(videos)){
-            currentListState = RefreshState.NoMoreData
-          }else if (!pagination && _.isEmpty(videos)){
-            currentListState = RefreshState.EmptyData
-          }else{
-            currentListState = RefreshState.Idle
-          }
-
-          this.setState({
-            videos: result,
-            loading: false,
-            listState: currentListState,
-          })
-
-          this.inProgressNetworkReq = false;
-          
-          
         }).catch(error => {
           console.error(error);
           this.setState({loading: false, listState: RefreshState.Failure, error: error})
