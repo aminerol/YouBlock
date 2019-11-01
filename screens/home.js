@@ -58,6 +58,31 @@ export default class HomeScreen extends React.Component {
         ),
     });
 
+    componentWillMount = () => {
+      this.focusListener = this.props.navigation.addListener('didFocus', () => {
+        LocalStorage.get(["blockedVideos", "blockedChannels"]).then(blockedContent => {
+          _.map(this.state.videos, (x)=>{
+            _.update(x, 'blocked', (n)=>{ return false});
+            _.update(x, 'owner.blocked', (n)=>{ return false});
+          });
+
+          _.intersectionWith(this.state.videos, blockedContent[0], (x,y) => {
+            _.merge(x, x.id === y.id && {'blocked': true})
+          });
+          _.intersectionWith(this.state.videos, blockedContent[1], (x,y) => {
+            _.merge(x, x.owner.id === y.id && {'owner': {'blocked': true}})
+          });
+          this.setState({
+            videos: this.state.videos,
+          })
+        })
+      });
+    };
+
+    componentWillUnmount() {
+      this.focusListener.remove();
+    }
+
     componentDidMount() {
       this.fetchData(false, false);
     }
@@ -91,9 +116,6 @@ export default class HomeScreen extends React.Component {
             })
             this.inProgressNetworkReq = false;
           })
-
-          
-
         }).catch(error => {
           console.error(error);
           this.setState({loading: false, listState: RefreshState.Failure, error: error})
@@ -141,13 +163,21 @@ export default class HomeScreen extends React.Component {
     _renderEmptyData = () => {
       return (
         <View style={{height}}>
-          <EmptyContent />
+          <EmptyContent headLine="No Videos Found" subHeadLine="Try Reload this page, or check your internet connection"/>
         </View>
       )
     };
 
     _renderItem = ({item}) => (
-      <HomeVideoItem video={item} />
+      <HomeVideoItem 
+        video={item} 
+        onVideoBlocked={(isblocked, id)=> {
+          _.set(_.find(this.state.videos, ['id', id]), 'blocked', isblocked)
+        }}
+        onChannelBlocked={(isblocked, id)=> {
+          _.set(_.find(this.state.videos, ['owner.id', id]), 'owner.blocked', isblocked)
+        }}
+      />
     );
 
     render() {

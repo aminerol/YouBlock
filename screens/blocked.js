@@ -1,4 +1,4 @@
-import React, { Component } from 'react';
+import React, { PureComponent } from 'react';
 import {
     Platform,
     StyleSheet,
@@ -22,6 +22,8 @@ import FlatListEx, {RefreshState} from '../components/FlatList';
 import Header from '../components/Header'
 import LogUtils from '../utils/LogUtils';
 import BlockedChannelItem from '../components/blockedChannelItem';
+import BlockedTitleItem from '../components/blockedTitleItem';
+import TextInputEx from '../components/TextInput';
 
 const { width, height } = Dimensions.get('window');
 var _ = require('lodash');
@@ -29,7 +31,7 @@ let filterSlidingPanel = {};
 let isfilterSlidingPanelOpen = false;
 const navHeight = getNavBarHeight();
 
-export default class BlockedScreen extends Component {
+export default class BlockedScreen extends PureComponent {
 
     static navigationOptions = ({ navigation }) => ({
         headerBackground: (
@@ -106,9 +108,15 @@ export default class BlockedScreen extends Component {
     }
 
     componentWillMount = () => {
-        this.fetchData();
+        this.focusListener = this.props.navigation.addListener('didFocus', () => {
+            this.fetchData();
+        });
     };
-    
+
+    componentWillUnmount() {
+        this.focusListener.remove();
+    }
+
     fetchData = () => {
         LocalStorage.get(["blockedVideos", "blockedChannels", "blockedTitles"]).then(results => {
 
@@ -137,29 +145,27 @@ export default class BlockedScreen extends Component {
     }
 
     handleSingleIndexSelect = (index) => {
-        if(index === 0){
-            this.setState({
-                listState: _.isEmpty(this.state.blockedVideos) ? RefreshState.EmptyData : RefreshState.Idle,
-                currentItems: this.state.blockedVideos
-            })
-        }
-        if(index === 1){
-            this.setState({
-                listState: _.isEmpty(this.state.blockedChannels) ? RefreshState.EmptyData : RefreshState.Idle,
-                currentItems: this.state.blockedChannels
-            })
-        }
-        if(index === 2){
-            this.setState({
-                listState: _.isEmpty(this.state.blockedTitles) ? RefreshState.EmptyData : RefreshState.Idle,
-                currentItems: this.state.blockedTitles
-            })
-        }
-        this.setState(prevState => ({ ...prevState, selectedIndex: index }))
+        key = index === 0 ? "blockedVideos" : index=== 1 ? "blockedChannels" : "blockedTitles"
+        LocalStorage.get(key).then(results =>{
+            currentItems = results
+            listState = _.isEmpty(results) ? RefreshState.EmptyData : RefreshState.Idle
+            this.setState(prevState => ({ ...prevState, selectedIndex: index, listState: listState, currentItems: currentItems }))
+        })      
+    }
+
+    removeTitle = async (query) => {
+        await LocalStorage.pop("blockedTitles", query)
+        this.fetchData();
+    }
+
+    onVideoBlocked = (isblocked, id) =>{
+        _.set(_.find(this.state.currentItems, ['id', id]), 'blocked', isblocked)
     }
 
     _renderItem = ({item}) => (
-        this.state.selectedIndex === 0 ? <BlockedVideoItem video={item} /> : <BlockedChannelItem channel={item} />
+        this.state.selectedIndex === 0 ? <BlockedVideoItem video={item} onVideoBlocked={this.onVideoBlocked}/> : 
+        this.state.selectedIndex === 1 ? <BlockedChannelItem channel={item} onChannelBlocked={this.onVideoBlocked}/> : 
+        <BlockedTitleItem title={item} onRemoveTitle={this.removeTitle}/>
     );
 
     _renderNoMoreData = () => {
@@ -171,9 +177,23 @@ export default class BlockedScreen extends Component {
     };
   
     _renderEmptyData = () => {
+        if (this.state.selectedIndex === 2) {
+            headline = 'No Titles Blocked'
+            subHeadline = 'Go Ahead and add some titles to block. dont be shy'
+        }
+        if (this.state.selectedIndex === 1)
+        {
+            headline = 'No Channels Blocked'
+            subHeadline = 'Go Ahead and Block some channels. dont be shy'
+        }
+        if (this.state.selectedIndex === 0)
+        {
+            headline = 'No Videos Blocked'
+            subHeadline = 'Go Ahead and Block some videos. dont be shy'
+        }
         return (
             <View style={{height}}>
-                <EmptyContent />
+                <EmptyContent headLine={headline} subHeadLine={subHeadline}/>
             </View>
         )
     };
@@ -195,7 +215,21 @@ export default class BlockedScreen extends Component {
                 <FlatListEx
                     data={this.state.currentItems}
                     renderItem={this._renderItem}
-                    keyExtractor={item => item.id.toString()}
+                    keyExtractor={(item) => item.id ? item.id.toString() : item.toString()}
+                    ListHeaderComponent={
+                        this.state.selectedIndex === 2 && (
+                            <View style={{marginBottom: 10}}>
+                                <TextInputEx placeholderText="Add Title" onSubmit={async (query) => 
+                                {
+                                    if(!_.isEmpty(query))
+                                    {
+                                        await LocalStorage.push("blockedTitles", query, true)
+                                        this.fetchData()
+                                    }
+                                }} />
+                            </View>
+                        )
+                    }
 
                     refreshState={this.state.listState}
                     onHeaderRefresh={this._handleRefresh}
