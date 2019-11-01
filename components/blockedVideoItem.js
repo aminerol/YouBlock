@@ -5,6 +5,7 @@ import { MaterialIcons, Ionicons } from '@expo/vector-icons';
 import LocalStorage from '../services/localStorage';
 import ActionSheet from './actionSheet'
 import DoubleTap from './doubleTap'
+import LogUtils from '../utils/LogUtils';
 const AnimatedIcon = Animated.createAnimatedComponent(Ionicons);
 var _ = require('lodash');
 
@@ -20,6 +21,12 @@ export default class BlockedVideoItem extends PureComponent {
     }
   }
 
+  componentWillReceiveProps(nextProps) {
+    this.setState({
+      isVideoBlocked: nextProps.video.blocked,
+    })
+  }
+
   _handleVideoBlocking = () => {
     this.setState((state) => {
       const newBlocked = !state.isVideoBlocked;
@@ -32,6 +39,7 @@ export default class BlockedVideoItem extends PureComponent {
       } else {
         LocalStorage.pop("blockedVideos", this.video.id, 'id')
       }
+      this.props.onVideoBlocked(newBlocked, this.video.id);
       return { isVideoBlocked: newBlocked };
     });
   };

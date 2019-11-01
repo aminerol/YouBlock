@@ -6,6 +6,7 @@ import LocalStorage from '../services/localStorage';
 import YoutubeAPI from '../services/youtube';
 import ActionSheet from './actionSheet'
 import DoubleTap from './doubleTap'
+import LogUtils from '../utils/LogUtils';
 const AnimatedIcon = Animated.createAnimatedComponent(Ionicons);
 var _ = require('lodash');
 
@@ -23,6 +24,15 @@ export default class HomeVideoItem extends PureComponent {
     }
   }
 
+  componentWillReceiveProps(nextProps) {
+
+    this.setState({
+      isVideoBlocked: nextProps.video.blocked,
+      isChannelBlocked: nextProps.video.owner.blocked
+    })
+  }
+  
+
   _handleVideoBlocking = () => {
     this.cuurentOverlay = 'video';
     const mergedObject = _.merge(this.video, {type: 'video'})
@@ -37,10 +47,10 @@ export default class HomeVideoItem extends PureComponent {
       } else {
         LocalStorage.pop("blockedVideos", mergedObject.id, 'id')
       }
+      this.props.onVideoBlocked(newBlocked, mergedObject.id);
       return { isVideoBlocked: newBlocked };
     });
   };
-  
 
   _handleChannelBlocking = () => {
     this.cuurentOverlay = 'channel';
@@ -48,17 +58,19 @@ export default class HomeVideoItem extends PureComponent {
     this.setState((state) => {
       const newBlocked = !state.isChannelBlocked;
       if (newBlocked) {
+        LocalStorage.push("blockedChannels", mergedObject, true, (item) => {return item.id === mergedObject.id})
         Animated.sequence([
           Animated.spring(this.animatedValue, { toValue: 1 }),
           Animated.spring(this.animatedValue, { toValue: 0 }),
         ]).start();
-        YoutubeAPI.getChannelInfo(mergedObject.id).then(channelInfo => {
+        YoutubeAPI.getChannelInfo(mergedObject.id).then(async channelInfo => {
           mergedObject = {...mergedObject, videoCount: channelInfo.videoCount, subscriberCount: channelInfo.subscriberCount, thumbnail: channelInfo.thumbnail}
-          LocalStorage.push("blockedChannels", mergedObject, true, (item) => {return item.id === mergedObject.id})
+          await LocalStorage.update("blockedChannels", mergedObject.id, 'id', mergedObject)
         })
       } else {
         LocalStorage.pop("blockedChannels", mergedObject.id, 'id')
       }
+      this.props.onChannelBlocked(newBlocked, mergedObject.id);
       return { isChannelBlocked: newBlocked };
     });
   };

@@ -23,22 +23,30 @@ export default class BlockedChannelItem extends PureComponent {
       isChannelBlocked: true
     }
   }
+
+  componentWillReceiveProps(nextProps) {
+    this.setState({
+      isChannelBlocked: nextProps.channel.blocked ? false : true,
+    })
+  }
   
   _handleChannelBlocking = () => {
     this.setState((state) => {
       const newBlocked = !state.isChannelBlocked;
       if (newBlocked) {
+        LocalStorage.push("blockedChannels", mergedObject, true, (item) => {return item.id === mergedObject.id})
         Animated.sequence([
           Animated.spring(this.animatedValue, { toValue: 1 }),
           Animated.spring(this.animatedValue, { toValue: 0 }),
         ]).start();
-        YoutubeAPI.getChannelInfo(this.channel.id).then(channelInfo => {
+        YoutubeAPI.getChannelInfo(this.channel.id).then(async channelInfo => {
             mergedObject = {...this.channel, videoCount: channelInfo.videoCount, subscriberCount: channelInfo.subscriberCount, thumbnail: channelInfo.thumbnail}
-            LocalStorage.push("blockedChannels", mergedObject, true, (item) => {return item.id === mergedObject.id})
+            await LocalStorage.update("blockedChannels", this.channel.id, 'id', mergedObject)
         })
       } else {
         LocalStorage.pop("blockedChannels", this.channel.id, 'id')
       }
+      this.props.onChannelBlocked(newBlocked, this.channel.id);
       return { isChannelBlocked: newBlocked };
     });
   };
