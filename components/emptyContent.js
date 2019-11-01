@@ -9,13 +9,14 @@ export default class emptyContent extends PureComponent {
   }
 
   render() {
+    const {headLine, subHeadLine} = this.props
     return (
       <View style={styles.container}>
         <Image source={require('../assets/conf.webp')} style={{ height: 200 }} resizeMode="contain" />
         <View style={{paddingVertical: 5}} />
-        <Text style={styles.headline}> No Results Found </Text>
+        <Text style={styles.headline}> {headLine} </Text>
         <View style={{paddingVertical: 3}} />
-        <Text style={styles.subHeadline}> Try Diffrent Keywords and try again </Text>
+        <Text style={styles.subHeadline}> {subHeadLine} </Text>
         <View style={{paddingVertical: 50}} />
       </View>
     );
