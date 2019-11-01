@@ -138,6 +138,37 @@ class LocalStorage {
             console.error(error, 'push')
         }
     }
+
+    /**
+	 * update an item from an array stored in AsyncStorage
+	 * @param {String} key They key
+	 * @param {Any} value The value to look for to update from the array of string, if array of objects is the value to match with
+     * @param {String|Array} [path] The path of the property to get.
+     * @param {Any} newValue The new Value to be updated with
+	 * @return {Promise}
+	 */
+	async update(key, value, path, newValue) {
+        try {
+            const currentValue = await this.get(key)
+            
+            if (currentValue === null) {
+                throw new Error(`There is no Array with key "${key}" stored, received ${typeof currentValue}.`);
+            }
+            if (Array.isArray(currentValue)) {
+                if(path) {
+                    _.remove(currentValue, [path, value])
+                }
+                else {
+                    _.remove(currentValue, function(v) { return v === value; })
+                }
+                currentValue.push(newValue)
+                return await this.save(key, currentValue);
+            }
+            throw new Error(`Existing value for key "${key}" must be of type null or Array, received ${typeof currentValue}.`);
+        } catch (error) {
+            console.error(error, 'update')
+        }
+	}
     
     /**
 	 * delete an item from an array stored in AsyncStorage by its value
