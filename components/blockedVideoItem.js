@@ -31,13 +31,13 @@ export default class BlockedVideoItem extends PureComponent {
     this.setState((state) => {
       const newBlocked = !state.isVideoBlocked;
       if (newBlocked) {
-        LocalStorage.push("blockedVideos", this.video, true, (item) => {return item.id === this.video.id})
+        LocalStorage.push("blockedVideos", this.video, {isExist: true, predicate: (item) => {return item.id === this.video.id}})
         Animated.sequence([
           Animated.spring(this.animatedValue, { toValue: 1 }),
           Animated.spring(this.animatedValue, { toValue: 0 }),
         ]).start();
       } else {
-        LocalStorage.pop("blockedVideos", this.video.id, 'id')
+        LocalStorage.pop("blockedVideos", this.video.id, {path: 'id'})
       }
       this.props.onVideoBlocked(newBlocked, this.video.id);
       return { isVideoBlocked: newBlocked };

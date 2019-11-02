@@ -34,17 +34,17 @@ export default class BlockedChannelItem extends PureComponent {
     this.setState((state) => {
       const newBlocked = !state.isChannelBlocked;
       if (newBlocked) {
-        LocalStorage.push("blockedChannels", mergedObject, true, (item) => {return item.id === mergedObject.id})
+        LocalStorage.push("blockedChannels", this.channel, {isExist: true, predicate: (item) => {return item.id === this.channel.id}})
         Animated.sequence([
           Animated.spring(this.animatedValue, { toValue: 1 }),
           Animated.spring(this.animatedValue, { toValue: 0 }),
         ]).start();
         YoutubeAPI.getChannelInfo(this.channel.id).then(async channelInfo => {
             mergedObject = {...this.channel, videoCount: channelInfo.videoCount, subscriberCount: channelInfo.subscriberCount, thumbnail: channelInfo.thumbnail}
-            await LocalStorage.update("blockedChannels", this.channel.id, 'id', mergedObject)
+            await LocalStorage.set("blockedChannels", this.channel.id, {path: id, newValue: mergedObject})
         })
       } else {
-        LocalStorage.pop("blockedChannels", this.channel.id, 'id')
+        LocalStorage.pop("blockedChannels", this.channel.id, {path: 'id'})
       }
       this.props.onChannelBlocked(newBlocked, this.channel.id);
       return { isChannelBlocked: newBlocked };
@@ -89,7 +89,10 @@ export default class BlockedChannelItem extends PureComponent {
         <View style={{flex: 2, padding: 20}}>
             <Text numberOfLines={2} includeFontPadding={false} ellipsizeMode='tail' style={styles.videoTitle}>{this.channel.name}</Text>
             <Text numberOfLines={2} includeFontPadding={false} style={styles.videoStats}>
-              {this.channel.subscriberCount + ' subscribers • ' + this.channel.videoCount + ' videos'}
+              {
+                this.channel.subscriberCount == -1 ? this.channel.videoCount + ' videos'
+                : this.channel.subscriberCount + ' subscribers • ' + this.channel.videoCount + ' videos'
+              }
             </Text>
             <View style={{flexDirection: 'row', flex: 1, paddingTop: 2,}}>
               {

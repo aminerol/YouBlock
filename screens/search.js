@@ -78,7 +78,7 @@ export default class SearchScreen extends React.Component {
             renderItem={({ item }) => (
               <Touchable 
                 onPress={() => {
-                  LocalStorage.push("suggestions", item.query, true)
+                  LocalStorage.push("suggestions", item.query, {isExist: true})
                   this.searchBar._handleChangeQuery(item.query);
                   this.props.navigation.navigate('Result', {
                     searchText: item.query,
@@ -126,7 +126,7 @@ export default class SearchScreen extends React.Component {
 
     onSubmit = (searchText) =>{
       if(!_.isEmpty(searchText)){
-        LocalStorage.push("suggestions", searchText, true)
+        LocalStorage.push("suggestions", searchText, {isExist: true})
         this.props.navigation.navigate('Result', {
           searchText: searchText,
         })

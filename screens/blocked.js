@@ -223,7 +223,7 @@ export default class BlockedScreen extends PureComponent {
                                 {
                                     if(!_.isEmpty(query))
                                     {
-                                        await LocalStorage.push("blockedTitles", query, true)
+                                        await LocalStorage.push("blockedTitles", query, {isExist: true})
                                         this.fetchData()
                                     }
                                 }} />
