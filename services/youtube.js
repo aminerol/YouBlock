@@ -150,7 +150,7 @@ class youtubeAPI {
                     return Promise.resolve({
                         title: snippet.title,
                         videoCount: millify.default(statistics.videoCount),
-                        subscriberCount: millify.default(statistics.subscriberCount),
+                        subscriberCount: statistics.hiddenSubscriberCount ? -1 : millify.default(statistics.subscriberCount),
                         thumbnail: snippet.thumbnails.medium ? snippet.thumbnails.medium.url : snippet.thumbnails.default.url
                     })
                 }else
