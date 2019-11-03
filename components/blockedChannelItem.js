@@ -1,6 +1,6 @@
 import React, { PureComponent } from 'react';
 import { View, Text, StyleSheet, Image, TouchableOpacity, Dimensions, Animated } from 'react-native';
-import FastImage from 'react-native-fast-image'
+
 import { MaterialIcons, Ionicons } from '@expo/vector-icons';
 import LocalStorage from '../services/localStorage';
 import ActionSheet from './actionSheet'
@@ -8,6 +8,7 @@ import DoubleTap from './doubleTap'
 import LogUtils from '../utils/LogUtils';
 import YoutubeAPI from '../services/youtube';
 const AnimatedIcon = Animated.createAnimatedComponent(Ionicons);
+import ContentLoader from 'react-native-easy-content-loader';
 var _ = require('lodash');
 const { width, height } = Dimensions.get('window');
 
@@ -19,10 +20,27 @@ export default class BlockedChannelItem extends PureComponent {
   constructor(props) {
     super(props);
     this.channel = this.props.channel;
+    LogUtils.log('this.channel', this.channel)
     this.state = {
-      isChannelBlocked: true
+      isChannelBlocked: true,
+      subscriberCount: this.channel.subscriberCount,
+      videoCount: this.channel.videoCount
     }
   }
+
+  componentDidMount() {
+    LocalStorage.after('blockedChannels', {
+      set: function ({ key, value, method, options }) {
+        if(this.channel.id === value){
+          const { subscriberCount, videoCount } = options.newValue
+          this.setState({subscriberCount, videoCount})
+        }
+      }
+    }, this)
+  }
+  componentWillUnmount = async () => {
+    await LocalStorage.destroy();
+  };
 
   componentWillReceiveProps(nextProps) {
     this.setState({
@@ -41,7 +59,7 @@ export default class BlockedChannelItem extends PureComponent {
         ]).start();
         YoutubeAPI.getChannelInfo(this.channel.id).then(async channelInfo => {
             mergedObject = {...this.channel, videoCount: channelInfo.videoCount, subscriberCount: channelInfo.subscriberCount, thumbnail: channelInfo.thumbnail}
-            await LocalStorage.set("blockedChannels", this.channel.id, {path: id, newValue: mergedObject})
+            await LocalStorage.set("blockedChannels", this.channel.id, {path: 'id', newValue: mergedObject})
         })
       } else {
         LocalStorage.pop("blockedChannels", this.channel.id, {path: 'id'})
@@ -73,55 +91,76 @@ export default class BlockedChannelItem extends PureComponent {
       )
   }
 
+
+
   render() { 
     return (
       <View style={styles.container}>
-          <DoubleTap 
-            onTaps={[
-              { count: 2, action: this._handleChannelBlocking }
-            ]}
-            >
-            <View style={{flex: 1, justifyContent: 'center', alignItems: 'center'}}>
-              <Image source={{ uri: this.channel.thumbnail }} style={{width: 100, height: 100, borderRadius: 50,}} resizeMode="cover" />
-              {this._renderOverlay()}
+          <ContentLoader 
+              active
+              avatar 
+              aSize={110} 
+              pRows={2}
+              tHeight={10}
+              loading={this.state.subscriberCount ? false: true}
+              containerStyles={{
+                marginHorizontal: 20,
+              }}
+              titleStyles={{
+                marginHorizontal: 40,
+                marginTop: 30,
+              }}
+              paragraphStyles={{
+                marginHorizontal: 40,
+                width: '35%'
+            }}>
+            <DoubleTap 
+              onTaps={[
+                { count: 2, action: this._handleChannelBlocking }
+              ]}
+              >
+              <View style={{flex: 1, justifyContent: 'center', alignItems: 'center'}}>
+                <Image source={{ uri: this.channel.thumbnail }} style={{width: 100, height: 100, borderRadius: 50,}} resizeMode="cover" />
+                {this._renderOverlay()}
+              </View>
+            </DoubleTap>
+            <View style={{flex: 2, padding: 20}}>
+              <Text numberOfLines={2} includeFontPadding={false} ellipsizeMode='tail' style={styles.videoTitle}>{this.channel.name}</Text>
+              <Text numberOfLines={2} includeFontPadding={false} style={styles.videoStats}>
+                {
+                  this.state.subscriberCount == -1 ? this.state.videoCount + ' videos'
+                  : this.state.subscriberCount + ' subscribers • ' + this.state.videoCount + ' videos'
+                }
+              </Text>
+              <View style={{flexDirection: 'row', flex: 1, paddingTop: 2,}}>
+                {
+                  this.state.isChannelBlocked ?
+                    <Ionicons name="md-lock" size={20} color="#FF0000"/>
+                  :
+                    <Ionicons name="md-unlock" size={20} color="#606060"/>
+                }
+              </View>
             </View>
-          </DoubleTap>
-        <View style={{flex: 2, padding: 20}}>
-            <Text numberOfLines={2} includeFontPadding={false} ellipsizeMode='tail' style={styles.videoTitle}>{this.channel.name}</Text>
-            <Text numberOfLines={2} includeFontPadding={false} style={styles.videoStats}>
-              {
-                this.channel.subscriberCount == -1 ? this.channel.videoCount + ' videos'
-                : this.channel.subscriberCount + ' subscribers • ' + this.channel.videoCount + ' videos'
-              }
-            </Text>
-            <View style={{flexDirection: 'row', flex: 1, paddingTop: 2,}}>
-              {
-                this.state.isChannelBlocked ?
-                  <Ionicons name="md-lock" size={20} color="#FF0000"/>
-                :
-                  <Ionicons name="md-unlock" size={20} color="#606060"/>
-              }
-            </View>
-        </View>
-        <View>
-          <ActionSheet 
-            cancelButtonIndex={2}
-            options={
-              [ this.state.isChannelBlocked ? 'Unblock Channel' : 'Block Channel',
-                'Cancel'
-              ]
-            }
-            childrens={[
-              <MaterialIcons key={'lock'} name={'lock'} size={24} />,
-              <MaterialIcons key={'close'} name='close' size={24} />
-            ]}
-            actions={
-              [ 
-                this._handleChannelBlocking,
-              ]                  
-            }
-          />
-        </View>
+            <View>
+              <ActionSheet 
+                cancelButtonIndex={2}
+                options={
+                  [ this.state.isChannelBlocked ? 'Unblock Channel' : 'Block Channel',
+                    'Cancel'
+                  ]
+                }
+                childrens={[
+                  <MaterialIcons key={'lock'} name={'lock'} size={24} />,
+                  <MaterialIcons key={'close'} name='close' size={24} />
+                ]}
+                actions={
+                  [ 
+                    this._handleChannelBlocking,
+                  ]                  
+                }
+              />
+          </View>
+        </ContentLoader>
       </View>
     )
   }
