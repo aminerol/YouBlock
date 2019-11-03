@@ -1,7 +1,7 @@
 {
   "expo": {
-    "name": "Awesome Project",
-    "slug": "AwesomeProject",
+    "name": "YouBlock",
+    "slug": "YouBlock",
     "privacy": "public",
     "sdkVersion": "34.0.0",
     "platforms": [
@@ -27,8 +27,8 @@
       "supportsTablet": true
     },
     "entryPoint": "node_modules/expo/AppEntry.js",
-    "description": ""
+    "description": "YouBlock - an app for blocking videos and channels from showing up on youtube app"
   },
-  "displayName": "Awesome Project",
-  "name": "AwesomeProject"
+  "displayName": "You Block",
+  "name": "You Block"
 }
