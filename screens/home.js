@@ -10,7 +10,7 @@ import {
   ActivityIndicator
 } from 'react-native';
 import { BorderlessButton } from 'react-native-gesture-handler';
-import SearchLayout from 'react-navigation-addon-search-layout';
+import SearchLayout from 'react-navigation-search-layout';
 import { Ionicons } from '@expo/vector-icons';
 const { width, height } = Dimensions.get('window');
 import YoutubeAPI from '../services/youtube';
@@ -18,7 +18,7 @@ import HomeVideoItem from '../components/homeVideoItem';
 import EmptyContent from '../components/emptyContent';
 import FlatListEx, {RefreshState} from '../components/FlatList';
 import LocalStorage from '../services/localStorage';
-import { getNavBarHeight } from 'react-native-iphone-x-helper';
+import { getNavBarHeight } from 'react-native-platform-helper';
 import LogUtils from '../utils/LogUtils';
 var _ = require('lodash');
 

@@ -2,7 +2,7 @@ import React, { PureComponent } from 'react';
 import {  View, TextInput, StyleSheet, Platform } from 'react-native';
 import { BorderlessButton } from 'react-native-gesture-handler';
 import { Ionicons } from '@expo/vector-icons';
-import SearchLayout from 'react-navigation-addon-search-layout';
+import SearchLayout from 'react-navigation-search-layout';
 
 export default class TextInputEx extends PureComponent {
   constructor(props) {

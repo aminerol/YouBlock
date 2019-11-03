@@ -240,7 +240,7 @@ class youtubeAPI {
                         duration: _.first(video.thumbnailOverlays).thumbnailOverlayTimeStatusRenderer.text.runs[0].text
                     };
                 } catch (error) {
-                    console.log(error)
+                    LogUtils.error("parseHomeVideo", video, error)
                 }
             })
         });
@@ -269,7 +269,7 @@ class youtubeAPI {
                     duration: _.first(video.thumbnailOverlays).thumbnailOverlayTimeStatusRenderer.text.runs[0].text
                 };
             } catch (error) {
-                console.log(error)
+                LogUtils.error("parseSearchVideos", video, error)
             }
         })
         return parsedVideos;

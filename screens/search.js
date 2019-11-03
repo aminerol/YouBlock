@@ -6,7 +6,7 @@ import {
   FlatList,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import SearchLayout from 'react-navigation-addon-search-layout';
+import SearchLayout from 'react-navigation-search-layout';
 import Touchable from 'react-native-platform-touchable';
 import YoutubeAPI from '../services/youtube';
 import LocalStorage from '../services/localStorage';

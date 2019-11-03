@@ -1,6 +1,6 @@
 import React, { PureComponent } from 'react';
 import { View, Text, StyleSheet, Image, Animated,} from 'react-native';
-import FastImage from 'react-native-fast-image'
+
 import { MaterialIcons, Ionicons } from '@expo/vector-icons';
 import LocalStorage from '../services/localStorage';
 import YoutubeAPI from '../services/youtube';

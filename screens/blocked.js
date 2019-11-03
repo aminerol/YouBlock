@@ -11,10 +11,10 @@ import {
   } from 'react-native';
 import { BorderlessButton } from 'react-native-gesture-handler';
 import { Ionicons } from '@expo/vector-icons';
-import SearchLayout from 'react-navigation-addon-search-layout';
-import { getNavBarHeight } from 'react-native-iphone-x-helper';
+import SearchLayout from 'react-navigation-search-layout';
+import { getNavBarHeight } from 'react-native-platform-helper';
 import SegmentedControlTab from 'react-native-segmented-control-tab';
-import SlidingPanel from 'react-native-sliding-up-down-panels';
+import SlidingPanel from 'react-native-sliding-panels';
 import LocalStorage from '../services/localStorage';
 import EmptyContent from '../components/emptyContent';
 import BlockedVideoItem from '../components/blockedVideoItem';
@@ -158,7 +158,7 @@ export default class BlockedScreen extends PureComponent {
         this.fetchData();
     }
 
-    onVideoBlocked = (isblocked, id) =>{
+    onVideoBlocked = (isblocked, id) => {
         _.set(_.find(this.state.currentItems, ['id', id]), 'blocked', isblocked)
     }
 
