@@ -12,7 +12,7 @@ export default class emptyContent extends PureComponent {
     const {headLine, subHeadLine} = this.props
     return (
       <View style={styles.container}>
-        <Image source={require('../assets/conf.webp')} style={{ height: 200 }} resizeMode="contain" />
+        <Image source={require('../assets/images/conf.webp')} style={{ height: 200 }} resizeMode="contain" />
         <View style={{paddingVertical: 5}} />
         <Text style={styles.headline}> {headLine} </Text>
         <View style={{paddingVertical: 3}} />

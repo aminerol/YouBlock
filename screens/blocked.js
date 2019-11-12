@@ -1,11 +1,10 @@
-import React, { PureComponent } from 'react';
+import React, { useState, useEffect, useLayoutEffect } from 'react';
 import {
     Platform,
     StyleSheet,
     Text,
     View,
     Image,
-    TouchableOpacity,
     Dimensions,
     ActivityIndicator
   } from 'react-native';
@@ -16,14 +15,16 @@ import { getNavBarHeight } from 'react-native-platform-helper';
 import SegmentedControlTab from 'react-native-segmented-control-tab';
 import SlidingPanel from 'react-native-sliding-panels';
 import LocalStorage from '../services/localStorage';
-import EmptyContent from '../components/emptyContent';
-import BlockedVideoItem from '../components/blockedVideoItem';
-import FlatListEx, {RefreshState} from '../components/FlatList';
-import Header from '../components/Header'
+import EmptyContent from '../Components/emptyContent';
+import BlockedVideoItem from '../Components/blockedVideoItem';
+import FlatListEx, {RefreshState} from '../Components/FlatList';
+import Header from '../Components/Header'
 import LogUtils from '../utils/LogUtils';
-import BlockedChannelItem from '../components/blockedChannelItem';
-import BlockedTitleItem from '../components/blockedTitleItem';
-import TextInputEx from '../components/TextInput';
+import BlockedChannelItem from '../Components/blockedChannelItem';
+import BlockedTitleItem from '../Components/blockedTitleItem';
+import TextInputEx from '../Components/TextInput';
+import { useBlockedState } from '../Context/Blocked';
+import countRenders from '../utils/countRender';
 
 const { width, height } = Dimensions.get('window');
 var _ = require('lodash');
@@ -31,140 +32,48 @@ let filterSlidingPanel = {};
 let isfilterSlidingPanelOpen = false;
 const navHeight = getNavBarHeight();
 
-export default class BlockedScreen extends PureComponent {
+export default function BlockedScreen(props) {
 
-    static navigationOptions = ({ navigation }) => ({
-        headerBackground: (
-            <Header
-                ref={component => { 
-                    this.header = component; 
-                }}
-                leftView={ <View style={{flex:0.2, flexDirection:'row', paddingHorizontal: 10,}}>
-                                <Image source={require('../assets/logo.png')} style={{flex: 1, height:navHeight}} resizeMode='contain' />
-                            </View>
-                }
-                rightView={ <View style={{flexDirection: 'row',}}>
-                                <BorderlessButton
-                                    onPress={() => {
-                                        if(isfilterSlidingPanelOpen){
-                                            filterSlidingPanel.onRequestClose();
-                                        }else{
-                                            filterSlidingPanel.onRequestStart();
-                                        }                      
-                                    }}
-                                    style={{justifyContent: 'center', paddingHorizontal: 10,}}>
-                                    <Ionicons
-                                        name="md-options"
-                                        size={Platform.OS === 'ios' ? 22 : 25}
-                                        color={SearchLayout.DefaultTintColor}
-                                    />
-                                </BorderlessButton>
+    const [ {blockedVideos, blockedChannels, blockedTitles, loading, error}, actions ] = useBlockedState()
 
-                                <BorderlessButton
-                                    onPress={() => {
-                                        this.header.slidingPanel.onRequestClose()
-                                    }}
-                                    style={{justifyContent: 'center', paddingHorizontal: 10}}>
-                                    <Ionicons
-                                        name="md-search"
-                                        size={Platform.OS === 'ios' ? 22 : 25}
-                                    color={SearchLayout.DefaultTintColor}/>
-                                </BorderlessButton>
-                
-                            </View>
-                }
-                backgroundColor='#fff'
-                tintColor={Platform.OS === 'ios' ? '#007AFF' : '#000'}>
-                    <View style={{width}}>
-                        <SearchLayout
-                            onBackButtonPressed={ () => {
-                                this.header.slidingPanel.onRequestStart()
-                            }}
-                            text=''
-                            onChangeQuery={(query) => {
-                            }}
-                            onSubmit={this.onSubmit}
-                            onClearQuery={() => {
-                            }}
-                        >
-                        </SearchLayout>
-                    </View>
-            </Header>
-        )
-    });
+    //countRenders(BlockedScreen)
 
-    constructor(props) {
-        super(props);
-        this.state = {
-            selectedIndex: 0,
-            loading: true,
-            blockedVideos: [],
-            blockedChannels: [],
-            blockedTitles: [],
-            currentItems: [],
-            listState: RefreshState.Idle,
-            error: null,
-        };
-    }
+    const [ listState, setListState ] = useState(RefreshState.Idle)
+    const [ currentItems, setCurrentItems ] = useState([])
+    const [ selectedIndex, setSelectedIndex ] = useState(0)
 
-    componentWillMount = () => {
-        this.focusListener = this.props.navigation.addListener('didFocus', () => {
-            this.fetchData();
-        });
-    };
+    useLayoutEffect(() => {
+        _.isEmpty(currentItems) && !loading ? setListState(RefreshState.EmptyData) : setListState(RefreshState.Idle)
+    }, [currentItems])
 
-    componentWillUnmount() {
-        this.focusListener.remove();
-    }
+    useLayoutEffect(() => {
+        selectedIndex === 0 ? setCurrentItems(blockedVideos) : 
+        selectedIndex === 1 ? setCurrentItems(blockedChannels) : 
+        selectedIndex === 2 && setCurrentItems(blockedTitles)
+    }, [selectedIndex, loading])
 
-    fetchData = () => {
-        LocalStorage.get(["blockedVideos", "blockedChannels", "blockedTitles"]).then(results => {
-
-            currentItems = [];
-            if(this.state.selectedIndex === 0){
-                currentItems = results[0];
-            }
-            if(this.state.selectedIndex === 1){
-                currentItems = results[1];
-            }
-            if(this.state.selectedIndex === 2){
-                currentItems = results[2];
-            }
-            this.setState({
-                blockedVideos: results[0], 
-                blockedChannels: results[1],
-                blockedTitles: results[2],
-                currentItems: currentItems,
-                loading: false,
-                listState: _.isEmpty(currentItems) ? RefreshState.EmptyData : RefreshState.Idle,
-            })
-        }).catch(error => {
-            console.error(error);
-            this.setState({loading: false, listState: RefreshState.Failure, error: error})
-        });
-    }
-
-    handleSingleIndexSelect = (index) => {
-        key = index === 0 ? "blockedVideos" : index=== 1 ? "blockedChannels" : "blockedTitles"
-        LocalStorage.get(key).then(results =>{
-            currentItems = results
-            listState = _.isEmpty(results) ? RefreshState.EmptyData : RefreshState.Idle
-            this.setState(prevState => ({ ...prevState, selectedIndex: index, listState: listState, currentItems: currentItems }))
-        })      
-    }
+    useLayoutEffect(() => {
+        if(error){
+            console.log('error fetching data', error)
+            setListState(RefreshState.Failure)
+        }
+    }, [error])
+    
+    useEffect(() => {
+        actions.getBlockedContent()
+    }, [])
 
     removeTitle = async (query) => {
         await LocalStorage.pop("blockedTitles", query)
-        this.fetchData();
     }
 
     onVideoBlocked = (isblocked, id) => {
-        _.set(_.find(this.state.currentItems, ['id', id]), 'blocked', isblocked)
+        _.set(_.find(currentItems, ['id', id]), 'blocked', isblocked)
     }
 
     _renderItem = ({item}) => (
-        this.state.selectedIndex === 0 ? <BlockedVideoItem video={item} onVideoBlocked={this.onVideoBlocked}/> : 
-        this.state.selectedIndex === 1 ? <BlockedChannelItem channel={item} onChannelBlocked={this.onVideoBlocked}/> : 
+        selectedIndex === 0 ? <BlockedVideoItem video={item} onVideoBlocked={this.onVideoBlocked}/> : 
+        selectedIndex === 1 ? <BlockedChannelItem channel={item} onChannelBlocked={this.onVideoBlocked}/> : 
         <BlockedTitleItem title={item} onRemoveTitle={this.removeTitle}/>
     );
 
@@ -177,16 +86,16 @@ export default class BlockedScreen extends PureComponent {
     };
   
     _renderEmptyData = () => {
-        if (this.state.selectedIndex === 2) {
+        if (selectedIndex === 2) {
             headline = 'No Titles Blocked'
             subHeadline = 'Go Ahead and add some titles to block. dont be shy'
         }
-        if (this.state.selectedIndex === 1)
+        if (selectedIndex === 1)
         {
             headline = 'No Channels Blocked'
             subHeadline = 'Go Ahead and Block some channels. dont be shy'
         }
-        if (this.state.selectedIndex === 0)
+        if (selectedIndex === 0)
         {
             headline = 'No Videos Blocked'
             subHeadline = 'Go Ahead and Block some videos. dont be shy'
@@ -198,41 +107,29 @@ export default class BlockedScreen extends PureComponent {
         )
     };
 
-    _handleRefresh = () => {
-        this.setState(
-          {
-            listState: RefreshState.HeaderRefreshing,
-          },
-          () => {
-            this.fetchData();
-          }
-        );
-    };
-
     _renderBody = () =>{
-        return !this.state.loading ? (
+        return !loading ? (
             <View style={styles.headerLayoutStyle}>
                 <FlatListEx
-                    data={this.state.currentItems}
+                    data={currentItems}
                     renderItem={this._renderItem}
                     keyExtractor={(item) => item.id ? item.id.toString() : item.toString()}
-                    ListHeaderComponent={
-                        this.state.selectedIndex === 2 && (
+                    ListHeaderComponent= {
+                        selectedIndex === 2 && (
                             <View style={{marginBottom: 10}}>
                                 <TextInputEx placeholderText="Add Title" onSubmit={async (query) => 
                                 {
                                     if(!_.isEmpty(query))
                                     {
                                         await LocalStorage.push("blockedTitles", query, {isExist: true})
-                                        this.fetchData()
                                     }
                                 }} />
                             </View>
                         )
                     }
 
-                    refreshState={this.state.listState}
-                    onHeaderRefresh={this._handleRefresh}
+                    refreshState={listState}
+                    onHeaderRefresh={setListState}
                     footerContainerStyle={{height: navHeight*1.5}}
 
                     footerNoMoreDataComponent={this._renderNoMoreData()}
@@ -248,37 +145,94 @@ export default class BlockedScreen extends PureComponent {
         );
     }
 
-    render() {
-        const navHeight = getNavBarHeight();
-        return (
-            <SlidingPanel
-                ref={component => { 
-                    filterSlidingPanel = component; 
-                }}
-                allowDragging = {false}
-                allowAnimation = {false}
-                onAnimationStop = {() => isfilterSlidingPanelOpen = !isfilterSlidingPanelOpen}
-                panelPosition= "top"
-                headerLayoutHeight = {height}
-                headerLayout = {this._renderBody}
-                slidingPanelLayout = { () => 
-                    <View style={styles.slidingPanelLayoutStyle}>
-                        <SegmentedControlTab
-                            values={['Videos', 'Channels', 'Titles']}
-                            selectedIndex={this.state.selectedIndex}
-                            tabStyle={styles.tabStyle}
-                            tabTextStyle={styles.tabTextStyle}
-                            activeTabStyle={styles.activeTabStyle}
-                            onTabPress={this.handleSingleIndexSelect}
-                        />
-                    </View>
-                }
-                AnimationSpeed = {500}
-                slidingPanelLayoutHeight = {navHeight}
-            />
-        );
-    }
+    return (
+        <SlidingPanel
+            ref={component => { 
+                filterSlidingPanel = component; 
+            }}
+            allowDragging = {false}
+            allowAnimation = {false}
+            onAnimationStop = {() => isfilterSlidingPanelOpen = !isfilterSlidingPanelOpen}
+            panelPosition= "top"
+            headerLayoutHeight = {height}
+            headerLayout = {this._renderBody}
+            slidingPanelLayout = { () => 
+                <View style={styles.slidingPanelLayoutStyle}>
+                    <SegmentedControlTab
+                        values={['Videos', 'Channels', 'Titles']}
+                        selectedIndex={selectedIndex}
+                        tabStyle={styles.tabStyle}
+                        tabTextStyle={styles.tabTextStyle}
+                        activeTabStyle={styles.activeTabStyle}
+                        onTabPress={setSelectedIndex}
+                    />
+                </View>
+            }
+            AnimationSpeed = {500}
+            slidingPanelLayoutHeight = {navHeight}
+        />
+    );
 }
+
+BlockedScreen.navigationOptions = () => ({
+    headerBackground: (
+        <Header
+            ref={component => { 
+                this.header = component; 
+            }}
+            leftView={ <View style={{flex:0.2, flexDirection:'row', paddingHorizontal: 10,}}>
+                            <Image source={require('../assets/images/logo.png')} style={{flex: 1, height:navHeight}} resizeMode='contain' />
+                        </View>
+            }
+            rightView={ <View style={{flexDirection: 'row',}}>
+                            <BorderlessButton
+                                onPress={() => {
+                                    if(isfilterSlidingPanelOpen){
+                                        filterSlidingPanel.onRequestClose();
+                                    }else{
+                                        filterSlidingPanel.onRequestStart();
+                                    }                      
+                                }}
+                                style={{justifyContent: 'center', paddingHorizontal: 10,}}>
+                                <Ionicons
+                                    name="md-options"
+                                    size={Platform.OS === 'ios' ? 22 : 25}
+                                    color={SearchLayout.DefaultTintColor}
+                                />
+                            </BorderlessButton>
+
+                            <BorderlessButton
+                                onPress={() => {
+                                    this.header.slidingPanel.onRequestClose()
+                                }}
+                                style={{justifyContent: 'center', paddingHorizontal: 10}}>
+                                <Ionicons
+                                    name="md-search"
+                                    size={Platform.OS === 'ios' ? 22 : 25}
+                                color={SearchLayout.DefaultTintColor}/>
+                            </BorderlessButton>
+            
+                        </View>
+            }
+            backgroundColor='#fff'
+            tintColor={Platform.OS === 'ios' ? '#007AFF' : '#000'}>
+                <View style={{width}}>
+                    <SearchLayout
+                        onBackButtonPressed={ () => {
+                            this.header.slidingPanel.onRequestStart()
+                        }}
+                        text=''
+                        onChangeQuery={(query) => {
+                        }}
+                        onSubmit={this.onSubmit}
+                        onClearQuery={() => {
+                        }}
+                    >
+                    </SearchLayout>
+                </View>
+        </Header>
+    )
+});
 
 const styles = StyleSheet.create({
     headerLayoutStyle: {

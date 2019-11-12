@@ -338,7 +338,7 @@ class LocalStorage extends EventEmitter {
    * @param {String} key They key
    * @param {Any} value The value to push onto the array
    * @param {Object} options that contains isExist and predicate for existance and function to check for the existance
-   * @return {Promise}
+   * @return {Boolean} returns wether the item pushed to the array or not
    */
   async push({ key, value, method, options }) {
     try {
@@ -346,7 +346,8 @@ class LocalStorage extends EventEmitter {
 
       if (currentValue === null) {
         // if there is no current value populate it with the new value
-        value = await this.save(key, [value]);
+        await this.save(key, [value]);
+        value = true
       } else {
         if (Array.isArray(currentValue)) {
           const { isExist } = options || false;
@@ -362,7 +363,12 @@ class LocalStorage extends EventEmitter {
             }
           }
 
-          if (!exist) value = await this.save(key, [...currentValue, value]);
+          if (!exist){
+            await this.save(key, [...currentValue, value]);
+            value = true
+          }else{
+            value = false
+          }
         }
         else 
           throw new Error( `Existing value for key "${key}" must be of type null or Array, received ${typeof currentValue}.`);

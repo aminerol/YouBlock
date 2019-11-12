@@ -59,6 +59,7 @@ class youtubeAPI {
                 }else{
                     sectionListRenderer = json.continuationContents.sectionListContinuation;
                 }
+
                 if (sectionListRenderer.continuations[1] && sectionListRenderer.continuations[1].reloadContinuationData) {
                     this.homeReloadToken = sectionListRenderer.continuations[1].reloadContinuationData.continuation;
                 }
@@ -218,6 +219,7 @@ class youtubeAPI {
 
     parseHomeVideos(topics) {
         var array = []
+        topics = _.filter(topics, 'shelfRenderer')
         const parsedVideos = topics.map(topic => {
             let videos = topic.shelfRenderer.content.horizontalListRenderer.items;
             videos = _.filter(videos, 'gridVideoRenderer')

@@ -1,11 +1,10 @@
-import * as React from 'react';
+import React, { useState, useEffect, useLayoutEffect } from 'react';
 import {
   Platform,
   StyleSheet,
   Text,
   View,
   Image,
-  TouchableOpacity,
   Dimensions,
   ActivityIndicator
 } from 'react-native';
@@ -14,136 +13,93 @@ import SearchLayout from 'react-navigation-search-layout';
 import { Ionicons } from '@expo/vector-icons';
 const { width, height } = Dimensions.get('window');
 import YoutubeAPI from '../services/youtube';
-import HomeVideoItem from '../components/homeVideoItem';
-import EmptyContent from '../components/emptyContent';
-import FlatListEx, {RefreshState} from '../components/FlatList';
+import HomeVideoItem from '../Components/homeVideoItem';
+import EmptyContent from '../Components/emptyContent';
+import FlatListEx, {RefreshState} from '../Components/FlatList';
 import LocalStorage from '../services/localStorage';
 import { getNavBarHeight } from 'react-native-platform-helper';
 import LogUtils from '../utils/LogUtils';
+import { useBlockedState } from '../Context/Blocked';
 var _ = require('lodash');
 
-export default class HomeScreen extends React.Component {
+export default function HomeScreen({navigation}) {
 
-    constructor(props) { 
-      super(props);
-      this.state = {
-        videos: [],
-        count: 0,
-        loading: true,
-        listState: RefreshState.Idle,
-        error: null,
-      };
-      this.inProgressNetworkReq = false;
-    }
+    const [ {blockedVideos, blockedChannels, blockedTitles}, actions ] = useBlockedState()
 
-    static navigationOptions = ({ navigation }) => ({
-        headerLeft: (
-            <View style={{flex:1, flexDirection:'row', justifyContent: 'center', paddingHorizontal: 10}}>
-                <Image source={require('../assets/logo.png')} style={{width:100, height:getNavBarHeight()}} resizeMode='contain' />
-            </View>
-        ),
-        headerRight: (
-            <View style={{flexDirection: 'row'}}>
-                <BorderlessButton
-                    onPress={() => {
-                      navigation.navigate('Search')
-                    }}
-                    style={{ marginRight: 15 }}>
-                    <Ionicons
-                    name="md-search"
-                    size={Platform.OS === 'ios' ? 22 : 25}
-                    color={SearchLayout.DefaultTintColor}/>
-                </BorderlessButton>
-            </View>
-        ),
-    });
+    const [ videos, setVideos ] = useState([])
+    const [ loading, setLoading ] = useState(true)
+    const [ listState, setListState ] = useState(RefreshState.Idle)
+    const [ error, setError ] = useState(RefreshState.Idle)
+    let inProgressNetworkReq = false
 
-    componentWillMount = () => {
-      this.focusListener = this.props.navigation.addListener('didFocus', () => {
-        LocalStorage.get(["blockedVideos", "blockedChannels"]).then(blockedContent => {
-          _.map(this.state.videos, (x)=>{
-            _.update(x, 'blocked', (n)=>{ return false});
-            _.update(x, 'owner.blocked', (n)=>{ return false});
-          });
+    useLayoutEffect(() => {
+      _.map(videos, (x) => _.update(x, 'blocked', () => false) );
+      _.intersectionWith(videos, blockedVideos, (x,y) =>  _.merge(x, x.id === y.id && {'blocked': true}));
+      setVideos(videos)
+    }, [blockedVideos])
 
-          _.intersectionWith(this.state.videos, blockedContent[0], (x,y) => {
-            _.merge(x, x.id === y.id && {'blocked': true})
-          });
-          _.intersectionWith(this.state.videos, blockedContent[1], (x,y) => {
-            _.merge(x, x.owner.id === y.id && {'owner': {'blocked': true}})
-          });
-          this.setState({
-            videos: this.state.videos,
-          })
-        })
-      });
-    };
+    useLayoutEffect(() => {
+      _.map(videos, (x) => _.update(x, 'owner.blocked', () => false) );
+      _.intersectionWith(videos, blockedChannels, (x,y) =>  _.merge(x, x.owner.id === y.id && {'owner': {'blocked': true}}));
+      setVideos(videos)
+    }, [blockedChannels])
 
-    componentWillUnmount() {
-      this.focusListener.remove();
-    }
+    useEffect(() => {
+      fetchData(false, false);
+    }, [])
 
-    componentDidMount() {
-      this.fetchData(false, false);
-    }
+    useEffect(() => {
+      if(listState == RefreshState.FooterRefreshing) 
+        fetchData(true, false);
+
+      if(listState == RefreshState.HeaderRefreshing) 
+        fetchData(false, true);
+    }, [listState])
 
     fetchData = (pagination, isReload) => {
-      if (!this.inProgressNetworkReq) {
-        this.inProgressNetworkReq = true;
-        YoutubeAPI.getHomeVideos(pagination, isReload).then(videos => {
-          var result = _.uniqBy([...this.state.videos, ...videos], 'id');
-          LocalStorage.get(["blockedVideos", "blockedChannels"]).then(blockedContent => {
-            _.intersectionWith(result, blockedContent[0], (x,y) => {
-              _.merge(x, x.id === y.id && {'blocked': true})
-            });
-            _.intersectionWith(result, blockedContent[1], (x,y) => {
-              _.merge(x, x.owner.id === y.id && {'owner': {'blocked': true}})
-            });
+      if (!inProgressNetworkReq) {
+        inProgressNetworkReq = true;
+        YoutubeAPI.getHomeVideos(pagination, isReload).then(homeResults => {
 
-            let currentListState = {}
-            if(pagination && _.isEmpty(videos)){
-              currentListState = RefreshState.NoMoreData
-            }else if (!pagination && _.isEmpty(videos)){
-              currentListState = RefreshState.EmptyData
-            }else{
-              currentListState = RefreshState.Idle
-            }
+          var result = _.uniqBy([...videos, ...homeResults], 'id');
 
-            this.setState({
-              videos: result,
-              loading: false,
-              listState: currentListState,
-            })
-            this.inProgressNetworkReq = false;
-          })
+          _.intersectionWith(result, blockedVideos, (x,y) => {
+            _.merge(x, x.id === y.id && {'blocked': true})
+          });
+          _.intersectionWith(result, blockedChannels, (x,y) => {
+            _.merge(x, x.owner.id === y.id && {'owner': {'blocked': true}})
+          });
+
+          let currentListState = {}
+          if(pagination && _.isEmpty(homeResults)){
+            currentListState = RefreshState.NoMoreData
+          }else if (!pagination && _.isEmpty(homeResults)){
+            currentListState = RefreshState.EmptyData
+          }else{
+            currentListState = RefreshState.Idle
+          }
+
+          setVideos(result)
+          setLoading(false)
+          setListState(currentListState)
+          inProgressNetworkReq = false;
+
         }).catch(error => {
           console.error(error);
-          this.setState({loading: false, listState: RefreshState.Failure, error: error})
-          this.inProgressNetworkReq = false;
+          setError(error)
+          setLoading(false)
+          setListState(RefreshState.Failure)
+          inProgressNetworkReq = false;
         });
       }
     }
 
     _handleLoadMore = () => {
-      this.setState(
-        {
-          listState: RefreshState.FooterRefreshing
-        },
-        () => {
-          this.fetchData(true, false);
-        }
-      );
+      setListState(RefreshState.FooterRefreshing)
     };
 
     _handleRefresh = () => {
-      this.setState(
-        {
-          listState: RefreshState.HeaderRefreshing
-        },
-        () => {
-          this.fetchData(false, true);
-        }
-      );
+      setListState(RefreshState.HeaderRefreshing)
     };
 
     _renderLoadingMore = () => {
@@ -172,40 +128,60 @@ export default class HomeScreen extends React.Component {
       <HomeVideoItem 
         video={item} 
         onVideoBlocked={(isblocked, id)=> {
-          _.set(_.find(this.state.videos, ['id', id]), 'blocked', isblocked)
+          _.set(_.find(videos, ['id', id]), 'blocked', isblocked)
         }}
         onChannelBlocked={(isblocked, id)=> {
-          _.set(_.find(this.state.videos, ['owner.id', id]), 'owner.blocked', isblocked)
+          _.set(_.find(videos, ['owner.id', id]), 'owner.blocked', isblocked)
         }}
       />
     );
 
-    render() {
-      return (
-        !this.state.loading ? (
-          <View style={styles.headerLayoutStyle}>
-              <FlatListEx
-                  data={this.state.videos}
-                  renderItem={this._renderItem}
-                  keyExtractor={item => item.id.toString()}
+    return (
+      !loading ? (
+        <View style={styles.headerLayoutStyle}>
+            <FlatListEx
+                data={videos}
+                renderItem={this._renderItem}
+                keyExtractor={item => item.id.toString()}
 
-                  refreshState={this.state.listState}
-                  onHeaderRefresh={this._handleRefresh}
-                  onFooterRefresh={this._handleLoadMore}
+                refreshState={listState}
+                onHeaderRefresh={this._handleRefresh}
+                onFooterRefresh={this._handleLoadMore}
 
-                  footerRefreshingComponent={this._renderLoadingMore()}
-                  footerNoMoreDataComponent={this._renderNoMoreData()}
-                  footerEmptyDataComponent={this._renderEmptyData()}
-                />
-            </View>
-        ) : (
-          <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center'}} >
-            <ActivityIndicator size="large" color={'#007aff'} />
+                footerRefreshingComponent={this._renderLoadingMore()}
+                footerNoMoreDataComponent={this._renderNoMoreData()}
+                footerEmptyDataComponent={this._renderEmptyData()}
+              />
           </View>
-        )
+      ) : (
+        <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center'}} >
+          <ActivityIndicator size="large" color={'#007aff'} />
+        </View>
       )
-    }
+    )
 }
+
+HomeScreen.navigationOptions = ({ navigation }) => ({
+  headerLeft: (
+      <View style={{flex:1, flexDirection:'row', justifyContent: 'center', paddingHorizontal: 10}}>
+          <Image source={require('../assets/images/logo.png')} style={{width:100, height:getNavBarHeight()}} resizeMode='contain' />
+      </View>
+  ),
+  headerRight: (
+      <View style={{flexDirection: 'row'}}>
+          <BorderlessButton
+              onPress={() => {
+                navigation.navigate('Search')
+              }}
+              style={{ marginRight: 15 }}>
+              <Ionicons
+                name="md-search"
+                size={Platform.OS === 'ios' ? 22 : 25}
+                color={SearchLayout.DefaultTintColor}/>
+          </BorderlessButton>
+      </View>
+  ),
+});
 
 const styles = StyleSheet.create({
     headerLayoutStyle: {
