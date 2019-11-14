@@ -1,88 +1,85 @@
-import React, { PureComponent } from 'react';
-import { View, Text, StyleSheet, Image, Animated,} from 'react-native';
+import React, { PureComponent, useState, useLayoutEffect, useEffect, useMemo, useCallback } from 'react';
+import { View, Text, StyleSheet, Image, Animated} from 'react-native';
 
 import { MaterialIcons, Ionicons } from '@expo/vector-icons';
+const AnimatedIcon = Animated.createAnimatedComponent(Ionicons);
+
 import LocalStorage from '../services/localStorage';
 import YoutubeAPI from '../services/youtube';
+import LogUtils from '../utils/LogUtils';
 import ActionSheet from './actionSheet'
 import DoubleTap from './doubleTap'
-import LogUtils from '../utils/LogUtils';
-const AnimatedIcon = Animated.createAnimatedComponent(Ionicons);
+import { useBlockedState } from '../Context/Blocked';
+import countRenders from '../utils/countRender';
 var _ = require('lodash');
 
-export default class HomeVideoItem extends PureComponent {
+export default function HomeVideoItem(props) {
 
   animatedValue = new Animated.Value(0);
+  curentOverlay  = 'none';
+  const video = props.video;
 
-  constructor(props) {
-    super(props);
-    this.video = this.props.video;
-    this.cuurentOverlay  = 'none';
-    this.state = {
-      isVideoBlocked: this.video.blocked,
-      isChannelBlocked: this.video.owner.blocked
-    }
-  }
+  countRenders(HomeVideoItem)
 
-  componentWillReceiveProps(nextProps) {
-
-    this.setState({
-      isVideoBlocked: nextProps.video.blocked,
-      isChannelBlocked: nextProps.video.owner.blocked
-    })
-  }
+  const [ {blockedVideos, blockedChannels}, actions ] = useBlockedState()
+  const [ isVideoBlocked, setIsVideoBlocked] = useState(video.blocked)
+  const [ isChannelBlocked, setIsChannelBlocked] = useState(video.owner.blocked)
   
+  useLayoutEffect(()=>{
+    setIsVideoBlocked(blockedVideos.some(item => item.id === video.id))
+  }, [blockedVideos])
+
+  // useMemo(()=>{
+  //   setIsChannelBlocked(blockedChannels.some(item => item.id === video.owner.id))
+  // }, [blockedChannels])
 
   _handleVideoBlocking = () => {
-    this.cuurentOverlay = 'video';
-    const mergedObject = _.merge(this.video, {type: 'video'})
-    this.setState((state) => {
-      const newBlocked = !state.isVideoBlocked;
-      if (newBlocked) {
-        LocalStorage.push("blockedVideos", mergedObject, {isExist: true, predicate: (item) => {return item.id === mergedObject.id}})
-        Animated.sequence([
-          Animated.spring(this.animatedValue, { toValue: 1 }),
-          Animated.spring(this.animatedValue, { toValue: 0 }),
-        ]).start();
-      } else {
-        LocalStorage.pop("blockedVideos", mergedObject.id, {path: 'id'})
-      }
-      this.props.onVideoBlocked(newBlocked, mergedObject.id);
-      return { isVideoBlocked: newBlocked };
-    });
+    this.curentOverlay = 'video'
+    const newBlocked = !isVideoBlocked;
+    const mergedObject = _.merge({}, video, {type: 'video', 'blocked': newBlocked})
+
+    if (newBlocked) {
+      setIsVideoBlocked(true)
+      actions.blockVideo(mergedObject)
+      Animated.sequence([
+        Animated.spring(animatedValue, { toValue: 1 }),
+        Animated.spring(animatedValue, { toValue: 0 }),
+      ]).start()
+    } else {
+      actions.unBlockVideo(mergedObject)
+      setIsVideoBlocked(false)
+    }
+    
   };
 
   _handleChannelBlocking = () => {
-    this.cuurentOverlay = 'channel';
-    let mergedObject =  { ...this.video.owner, type: 'channel' }
-    this.setState((state) => {
-      const newBlocked = !state.isChannelBlocked;
-      if (newBlocked) {
-        LocalStorage.push("blockedChannels", mergedObject, {isExist: true, predicate: (item) => {return item.id === mergedObject.id}})
-        Animated.sequence([
-          Animated.spring(this.animatedValue, { toValue: 1 }),
-          Animated.spring(this.animatedValue, { toValue: 0 }),
-        ]).start();
-        YoutubeAPI.getChannelInfo(mergedObject.id).then(async channelInfo => {
-          mergedObject = {...mergedObject, videoCount: channelInfo.videoCount, subscriberCount: channelInfo.subscriberCount, thumbnail: channelInfo.thumbnail}
-          await LocalStorage.set("blockedChannels", mergedObject.id, {path: 'id', newValue: mergedObject})
-        })
-      } else {
-        LocalStorage.pop("blockedChannels", mergedObject.id, {path: 'id'})
-      }
-      this.props.onChannelBlocked(newBlocked, mergedObject.id);
-      return { isChannelBlocked: newBlocked };
-    });
+    this.curentOverlay = 'channel'
+    let mergedObject =  { ...video.owner, type: 'channel' }
+    const newBlocked = !isChannelBlocked;
+    if (newBlocked) {
+      actions.blockChannel(mergedObject)
+      Animated.sequence([
+        Animated.spring(animatedValue, { toValue: 1 }),
+        Animated.spring(animatedValue, { toValue: 0 }),
+      ]).start();
+      YoutubeAPI.getChannelInfo(mergedObject.id).then(async channelInfo => {
+        mergedObject = {...mergedObject, videoCount: channelInfo.videoCount, subscriberCount: channelInfo.subscriberCount, thumbnail: channelInfo.thumbnail}
+        await LocalStorage.set("blockedChannels", mergedObject.id, {path: 'id', newValue: mergedObject})
+      })
+    } else {
+      actions.unBlockChannel(mergedObject)
+    }
+    setIsChannelBlocked(newBlocked)
   };
 
   _renderOverlay = () => {
     const imageStyles = [
       styles.overlayHeart,
       {
-        opacity: this.animatedValue,
+        opacity: animatedValue,
         transform: [
           {
-            scale: this.animatedValue.interpolate({
+            scale: animatedValue.interpolate({
               inputRange: [0, 1],
               outputRange: [0.7, 1.5],
             }),
@@ -90,7 +87,7 @@ export default class HomeVideoItem extends PureComponent {
         ],
       },
     ];
-    return this.cuurentOverlay == 'video' ? (
+    return this.curentOverlay == 'video' ? (
             <View style={styles.overlay}>
               <AnimatedIcon name="md-eye-off" size={100} color="#FF0000" style={imageStyles}/>
             </View>
@@ -101,69 +98,66 @@ export default class HomeVideoItem extends PureComponent {
           )
   }
 
-  render() {
-    const video = this.video;
-    return (
-      <View style={styles.container}>
-          <DoubleTap 
-            onTaps={[
-              { count: 2, action: this._handleVideoBlocking },
-              { count: 3, action: this._handleChannelBlocking }
-            ]}
-            >
-            <View style={[styles.shadowsStyling, {paddingHorizontal: 5,}]}>
-              <Image source={{ uri: video.thumbnail }} style={{ height: 200, borderRadius: 5 }} resizeMode="stretch" />
-              {this._renderOverlay()}
-            </View>
-          </DoubleTap>
-          <View style={styles.descContainer}>
-              <Image source={{ uri: video.owner.thumbnail }} style={{ width: 50, height: 50, borderRadius: 25 }} />
-              <View style={styles.videoDetails}>
-                  <Text numberOfLines={2} includeFontPadding={false} style={styles.videoTitle}>{video.title}</Text>
-                  <View style={{flexDirection: 'column', flex: 1, flexWrap: 'wrap'}}>
-                    <Text numberOfLines={2} includeFontPadding={false} style={styles.videoStats}>
-                      {video.owner.name + '\u0009 • ' + video.views+ ' • ' + video.publishedTime}
-                    </Text>
-                    <View style={{flexDirection: 'row', flex: 1, paddingTop: 2,}}>
-                      {
-                        this.state.isVideoBlocked ?
-                          <Ionicons name="md-eye-off" size={25} color="#FF0000"/>
-                        :
-                          <Ionicons name="md-eye" size={25} color="#606060"/>
-                      }
-                      <View style={{paddingHorizontal: 8}} />
-                      {
-                        this.state.isChannelBlocked ?
-                          <Ionicons name="md-lock" size={23} color="#FF0000"/>
-                        :
-                          <Ionicons name="md-unlock" size={23} color="#606060"/>
-                      }
-                    </View>
-                  </View>
-              </View>
-              <ActionSheet 
-                cancelButtonIndex={2}
-                options={
-                  [ this.state.isVideoBlocked ? 'Unblock Video' : 'Block Video', 
-                    this.state.isChannelBlocked ? 'Unblock Channel' : 'Block Channel',
-                    'Cancel'
-                  ]
-                }
-                childrens={[
-                  <MaterialIcons key={'visibility-off'} name={'visibility-off'} size={24} />,
-                  <MaterialIcons key={'lock'} name={'lock'} size={24} />,
-                  <MaterialIcons key={'close'} name='close' size={24} />
-                ]}
-                actions={
-                  [ this._handleVideoBlocking, 
-                    this._handleChannelBlocking,
-                  ]                  
-                }
-              />
+  return (
+    <View style={styles.container}>
+        <DoubleTap 
+          onTaps={[
+            { count: 2, action: _handleVideoBlocking },
+            { count: 3, action: _handleChannelBlocking }
+          ]}
+          >
+          <View style={[styles.shadowsStyling, {paddingHorizontal: 5,}]}>
+            <Image source={{ uri: video.thumbnail }} style={{ height: 200, borderRadius: 5 }} resizeMode="stretch" />
+            {_renderOverlay()}
           </View>
-      </View>
-    )
-  }
+        </DoubleTap>
+        <View style={styles.descContainer}>
+            <Image source={{ uri: video.owner.thumbnail }} style={{ width: 50, height: 50, borderRadius: 25 }} />
+            <View style={styles.videoDetails}>
+                <Text numberOfLines={2} includeFontPadding={false} style={styles.videoTitle}>{video.title}</Text>
+                <View style={{flexDirection: 'column', flex: 1, flexWrap: 'wrap'}}>
+                  <Text numberOfLines={2} includeFontPadding={false} style={styles.videoStats}>
+                    {video.owner.name + '\u0009 • ' + video.views+ ' • ' + video.publishedTime}
+                  </Text>
+                  <View style={{flexDirection: 'row', flex: 1, paddingTop: 2,}}>
+                    {
+                      isVideoBlocked ?
+                        <Ionicons name="md-eye-off" size={25} color="#FF0000"/>
+                      :
+                        <Ionicons name="md-eye" size={25} color="#606060"/>
+                    }
+                    <View style={{paddingHorizontal: 8}} />
+                    {
+                      isChannelBlocked ?
+                        <Ionicons name="md-lock" size={23} color="#FF0000"/>
+                      :
+                        <Ionicons name="md-unlock" size={23} color="#606060"/>
+                    }
+                  </View>
+                </View>
+            </View>
+            <ActionSheet 
+              cancelButtonIndex={2}
+              options={
+                [ isVideoBlocked ? 'Unblock Video' : 'Block Video', 
+                  isChannelBlocked ? 'Unblock Channel' : 'Block Channel',
+                  'Cancel'
+                ]
+              }
+              childrens={[
+                <MaterialIcons key={'visibility-off'} name={'visibility-off'} size={24} />,
+                <MaterialIcons key={'lock'} name={'lock'} size={24} />,
+                <MaterialIcons key={'close'} name='close' size={24} />
+              ]}
+              actions={
+                [ _handleVideoBlocking, 
+                  _handleChannelBlocking,
+                ]                  
+              }
+            />
+        </View>
+    </View>
+  )
 }
 
 const styles = StyleSheet.create({
@@ -211,5 +205,5 @@ const styles = StyleSheet.create({
       height: 1,
       width: 0
     }
-}
+  }
 });

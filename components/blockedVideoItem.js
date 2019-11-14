@@ -1,58 +1,49 @@
-import React, { PureComponent } from 'react';
+import React, { PureComponent, useState, useLayoutEffect } from 'react';
 import { View, Text, StyleSheet, Image, Animated,} from 'react-native';
 
 import { MaterialIcons, Ionicons } from '@expo/vector-icons';
-import LocalStorage from '../services/localStorage';
 import ActionSheet from './actionSheet'
 import DoubleTap from './doubleTap'
 import LogUtils from '../utils/LogUtils';
+import { useBlockedState } from '../Context/Blocked';
 const AnimatedIcon = Animated.createAnimatedComponent(Ionicons);
 var _ = require('lodash');
 
-export default class BlockedVideoItem extends PureComponent {
+export default function BlockedVideoItem(props) {
 
-  animatedValue = new Animated.Value(0);
+  let animatedValue = new Animated.Value(0);
+  const video = props.video
 
-  constructor(props) {
-    super(props);
-    this.video = this.props.video;
-    this.state = {
-      isVideoBlocked: true,
-    }
-  }
+  const [ {blockedVideos}, actions ] = useBlockedState()
+  const [ isVideoBlocked, setIsVideoBlocked] = useState(true)
 
-  componentWillReceiveProps(nextProps) {
-    this.setState({
-      isVideoBlocked: nextProps.video.blocked,
-    })
-  }
+  useLayoutEffect(()=>{
+    setIsVideoBlocked(blockedVideos.some(item => item.id === video.id))
+  }, [blockedVideos])
 
   _handleVideoBlocking = () => {
-    this.setState((state) => {
-      const newBlocked = !state.isVideoBlocked;
-      if (newBlocked) {
-        LocalStorage.push("blockedVideos", this.video, {isExist: true, predicate: (item) => {return item.id === this.video.id}})
-        Animated.sequence([
-          Animated.spring(this.animatedValue, { toValue: 1 }),
-          Animated.spring(this.animatedValue, { toValue: 0 }),
-        ]).start();
-      } else {
-        LocalStorage.pop("blockedVideos", this.video.id, {path: 'id'})
-      }
-      this.props.onVideoBlocked(newBlocked, this.video.id);
-      return { isVideoBlocked: newBlocked };
-    });
+    const newBlocked = !isVideoBlocked;
+    const mergedObject = _.merge({}, video, {type: 'video', 'blocked': newBlocked})
+    if (newBlocked) {
+      actions.blockVideo(mergedObject)
+      Animated.sequence([
+        Animated.spring(animatedValue, { toValue: 1 }),
+        Animated.spring(animatedValue, { toValue: 0 }),
+      ]).start();
+    } else {
+      actions.unBlockVideo(mergedObject)
+    }
+    setIsVideoBlocked(newBlocked)
   };
-  
 
   _renderOverlay = () => {
     const imageStyles = [
       styles.overlayHeart,
       {
-        opacity: this.animatedValue,
+        opacity: animatedValue,
         transform: [
           {
-            scale: this.animatedValue.interpolate({
+            scale: animatedValue.interpolate({
               inputRange: [0, 1],
               outputRange: [0.7, 1.5],
             }),
@@ -67,59 +58,56 @@ export default class BlockedVideoItem extends PureComponent {
     )
   }
 
-  render() {
-    const video = this.video;
-    return (
-      <View style={styles.container}>
-          <DoubleTap 
-            onTaps={[
-              { count: 2, action: this._handleVideoBlocking },
-            ]}
-            >
-            <View style={[styles.shadowsStyling, {paddingHorizontal: 5,}]}>
-              <Image source={{ uri: video.thumbnail }} style={{ height: 200, borderRadius: 5 }} resizeMode="stretch" />
-              {this._renderOverlay()}
-            </View>
-          </DoubleTap>
-          <View style={styles.descContainer}>
-              <Image source={{ uri: video.owner.thumbnail }} style={{ width: 50, height: 50, borderRadius: 25 }} />
-              <View style={styles.videoDetails}>
-                  <Text numberOfLines={2} includeFontPadding={false} style={styles.videoTitle}>{video.title}</Text>
-                  <View style={{flexDirection: 'column', flex: 1, flexWrap: 'wrap'}}>
-                    <Text numberOfLines={2} includeFontPadding={false} style={styles.videoStats}>
-                      {video.views + ' • ' + video.owner.name}
-                    </Text>
-                    <View style={{flexDirection: 'row', flex: 1, paddingTop: 2,}}>
-                      {
-                        this.state.isVideoBlocked ?
-                          <Ionicons name="md-eye-off" size={25} color="#FF0000"/>
-                        :
-                          <Ionicons name="md-eye" size={25} color="#606060"/>
-                      }
-                  </View>
-                </View>
-            </View>
-            <ActionSheet 
-              cancelButtonIndex={1}
-              options={
-                [ this.state.isVideoBlocked ? 'Unblock Video' : 'Block Video', 
-                  'Cancel'
-                ]
-              }
-              childrens={[
-                <MaterialIcons key={'visibility-off'} name={'visibility-off'} size={24} />,
-                <MaterialIcons key={'close'} name='close' size={24} />
-              ]}
-              actions={
-                [ 
-                  this._handleVideoBlocking, 
-                ]                  
-              }
-            />
+  return (
+    <View style={styles.container}>
+        <DoubleTap 
+          onTaps={[
+            { count: 2, action: _handleVideoBlocking },
+          ]}
+          >
+          <View style={[styles.shadowsStyling, {paddingHorizontal: 5,}]}>
+            <Image source={{ uri: video.thumbnail }} style={{ height: 200, borderRadius: 5 }} resizeMode="stretch" />
+            {_renderOverlay()}
           </View>
-      </View>
-    )
-  }
+        </DoubleTap>
+        <View style={styles.descContainer}>
+            <Image source={{ uri: video.owner.thumbnail }} style={{ width: 50, height: 50, borderRadius: 25 }} />
+            <View style={styles.videoDetails}>
+                <Text numberOfLines={2} includeFontPadding={false} style={styles.videoTitle}>{video.title}</Text>
+                <View style={{flexDirection: 'column', flex: 1, flexWrap: 'wrap'}}>
+                  <Text numberOfLines={2} includeFontPadding={false} style={styles.videoStats}>
+                    {video.views + ' • ' + video.owner.name}
+                  </Text>
+                  <View style={{flexDirection: 'row', flex: 1, paddingTop: 2,}}>
+                    {
+                      isVideoBlocked ?
+                        <Ionicons name="md-eye-off" size={25} color="#FF0000"/>
+                      :
+                        <Ionicons name="md-eye" size={25} color="#606060"/>
+                    }
+                </View>
+              </View>
+          </View>
+          <ActionSheet 
+            cancelButtonIndex={1}
+            options={
+              [ isVideoBlocked ? 'Unblock Video' : 'Block Video', 
+                'Cancel'
+              ]
+            }
+            childrens={[
+              <MaterialIcons key={'visibility-off'} name={'visibility-off'} size={24} />,
+              <MaterialIcons key={'close'} name='close' size={24} />
+            ]}
+            actions={
+              [ 
+                _handleVideoBlocking, 
+              ]                  
+            }
+          />
+        </View>
+    </View>
+  )
 }
 
 const styles = StyleSheet.create({
@@ -167,5 +155,5 @@ const styles = StyleSheet.create({
       height: 1,
       width: 0
     }
-}
+  }
 });
