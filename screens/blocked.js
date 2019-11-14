@@ -32,7 +32,7 @@ let filterSlidingPanel = {};
 let isfilterSlidingPanelOpen = false;
 const navHeight = getNavBarHeight();
 
-export default function BlockedScreen(props) {
+export default function BlockedScreen({navigation}) {
 
     const [ {blockedVideos, blockedChannels, blockedTitles, loading, error}, actions ] = useBlockedState()
 
@@ -50,7 +50,7 @@ export default function BlockedScreen(props) {
         selectedIndex === 0 ? setCurrentItems(blockedVideos) : 
         selectedIndex === 1 ? setCurrentItems(blockedChannels) : 
         selectedIndex === 2 && setCurrentItems(blockedTitles)
-    }, [selectedIndex, loading])
+    }, [selectedIndex, loading, blockedVideos, blockedChannels, blockedTitles])
 
     useLayoutEffect(() => {
         if(error){
@@ -58,22 +58,14 @@ export default function BlockedScreen(props) {
             setListState(RefreshState.Failure)
         }
     }, [error])
-    
-    useEffect(() => {
-        actions.getBlockedContent()
-    }, [])
 
     removeTitle = async (query) => {
         await LocalStorage.pop("blockedTitles", query)
     }
 
-    onVideoBlocked = (isblocked, id) => {
-        _.set(_.find(currentItems, ['id', id]), 'blocked', isblocked)
-    }
-
     _renderItem = ({item}) => (
-        selectedIndex === 0 ? <BlockedVideoItem video={item} onVideoBlocked={this.onVideoBlocked}/> : 
-        selectedIndex === 1 ? <BlockedChannelItem channel={item} onChannelBlocked={this.onVideoBlocked}/> : 
+        selectedIndex === 0 ? <BlockedVideoItem video={item}/> : 
+        selectedIndex === 1 ? <BlockedChannelItem channel={item}/> : 
         <BlockedTitleItem title={item} onRemoveTitle={this.removeTitle}/>
     );
 
@@ -113,7 +105,7 @@ export default function BlockedScreen(props) {
                 <FlatListEx
                     data={currentItems}
                     renderItem={this._renderItem}
-                    keyExtractor={(item) => item.id ? item.id.toString() : item.toString()}
+                    keyExtractor={(item, index) => item.id ? item.id + index : item.toString() + index}
                     ListHeaderComponent= {
                         selectedIndex === 2 && (
                             <View style={{marginBottom: 10}}>
@@ -174,12 +166,9 @@ export default function BlockedScreen(props) {
     );
 }
 
-BlockedScreen.navigationOptions = () => ({
+BlockedScreen.navigationOptions = ({ navigation }) => ({
     headerBackground: (
         <Header
-            ref={component => { 
-                this.header = component; 
-            }}
             leftView={ <View style={{flex:0.2, flexDirection:'row', paddingHorizontal: 10,}}>
                             <Image source={require('../assets/images/logo.png')} style={{flex: 1, height:navHeight}} resizeMode='contain' />
                         </View>
