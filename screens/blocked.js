@@ -1,10 +1,11 @@
-import React, { useState, useEffect, useLayoutEffect } from 'react';
+import React, { PureComponent } from 'react';
 import {
     Platform,
     StyleSheet,
     Text,
     View,
     Image,
+    TouchableOpacity,
     Dimensions,
     ActivityIndicator
   } from 'react-native';
@@ -23,7 +24,8 @@ import LogUtils from '../utils/LogUtils';
 import BlockedChannelItem from '../Components/blockedChannelItem';
 import BlockedTitleItem from '../Components/blockedTitleItem';
 import TextInputEx from '../Components/TextInput';
-import { useBlockedState } from '../Context/Blocked';
+import connect from '../Context/connect';
+import { BlockedStateContext } from '../Context/Blocked'
 import countRenders from '../utils/countRender';
 
 const { width, height } = Dimensions.get('window');
@@ -32,40 +34,44 @@ let filterSlidingPanel = {};
 let isfilterSlidingPanelOpen = false;
 const navHeight = getNavBarHeight();
 
-export default function BlockedScreen({navigation}) {
+class BlockedScreen extends PureComponent {
 
-    const [ {blockedVideos, blockedChannels, blockedTitles, loading, error}, actions ] = useBlockedState()
+    constructor(props) {
+        super(props);
+        this.state = {
+            selectedIndex: 0,
+            listState: RefreshState.Idle,
+        };
+    }
 
-    //countRenders(BlockedScreen)
+    componentDidMount(){
+        this.fetchData();
+    }
 
-    const [ listState, setListState ] = useState(RefreshState.Idle)
-    const [ currentItems, setCurrentItems ] = useState([])
-    const [ selectedIndex, setSelectedIndex ] = useState(0)
+    componentDidUpdate(prevState, snapshot){
+        this.flatList && this.setState({
+            listState: _.isEmpty(this.flatList.props.data) ? RefreshState.EmptyData : RefreshState.Idle,
+        })
+    }
 
-    useLayoutEffect(() => {
-        _.isEmpty(currentItems) && !loading ? setListState(RefreshState.EmptyData) : setListState(RefreshState.Idle)
-    }, [currentItems])
+    fetchData = async () => {
+        await this.props.getBlockedContent()
+    }
 
-    useLayoutEffect(() => {
-        selectedIndex === 0 ? setCurrentItems(blockedVideos) : 
-        selectedIndex === 1 ? setCurrentItems(blockedChannels) : 
-        selectedIndex === 2 && setCurrentItems(blockedTitles)
-    }, [selectedIndex, loading, blockedVideos, blockedChannels, blockedTitles])
-
-    useLayoutEffect(() => {
-        if(error){
-            console.log('error fetching data', error)
-            setListState(RefreshState.Failure)
-        }
-    }, [error])
+    handleSingleIndexSelect = (index) => {
+        this.setState({
+            selectedIndex: index,
+        })
+    }
 
     removeTitle = async (query) => {
         await LocalStorage.pop("blockedTitles", query)
+        this.fetchData();
     }
 
     _renderItem = ({item}) => (
-        selectedIndex === 0 ? <BlockedVideoItem video={item}/> : 
-        selectedIndex === 1 ? <BlockedChannelItem channel={item}/> : 
+        this.state.selectedIndex === 0 ? <BlockedVideoItem video={item}/> : 
+        this.state.selectedIndex === 1 ? <BlockedChannelItem channel={item}/> : 
         <BlockedTitleItem title={item} onRemoveTitle={this.removeTitle}/>
     );
 
@@ -78,16 +84,16 @@ export default function BlockedScreen({navigation}) {
     };
   
     _renderEmptyData = () => {
-        if (selectedIndex === 2) {
+        if (this.state.selectedIndex === 2) {
             headline = 'No Titles Blocked'
             subHeadline = 'Go Ahead and add some titles to block. dont be shy'
         }
-        if (selectedIndex === 1)
+        if (this.state.selectedIndex === 1)
         {
             headline = 'No Channels Blocked'
             subHeadline = 'Go Ahead and Block some channels. dont be shy'
         }
-        if (selectedIndex === 0)
+        if (this.state.selectedIndex === 0)
         {
             headline = 'No Videos Blocked'
             subHeadline = 'Go Ahead and Block some videos. dont be shy'
@@ -99,29 +105,48 @@ export default function BlockedScreen({navigation}) {
         )
     };
 
+    _handleRefresh = () => {
+        this.setState(
+          {
+            listState: RefreshState.HeaderRefreshing,
+          },
+          () => {
+            this.fetchData();
+          }
+        );
+    };
+
+    _getCurrentItems(){
+        return this.state.selectedIndex === 0 ? this.props.blockedVideos : 
+        this.state.selectedIndex === 1 ? this.props.blockedChannels : 
+        this.props.blockedTitles
+    }
+
     _renderBody = () =>{
-        return !loading ? (
+        return !this.props.loading ? (
             <View style={styles.headerLayoutStyle}>
                 <FlatListEx
-                    data={currentItems}
+                    ref={ref => this.flatList = ref}
+                    data={this._getCurrentItems()}
                     renderItem={this._renderItem}
-                    keyExtractor={(item, index) => item.id ? item.id + index : item.toString() + index}
-                    ListHeaderComponent= {
-                        selectedIndex === 2 && (
+                    keyExtractor={(item) => item.id ? item.id.toString() : item.toString()}
+                    ListHeaderComponent={
+                        this.state.selectedIndex === 2 && (
                             <View style={{marginBottom: 10}}>
                                 <TextInputEx placeholderText="Add Title" onSubmit={async (query) => 
                                 {
                                     if(!_.isEmpty(query))
                                     {
                                         await LocalStorage.push("blockedTitles", query, {isExist: true})
+                                        this.fetchData()
                                     }
                                 }} />
                             </View>
                         )
                     }
 
-                    refreshState={listState}
-                    onHeaderRefresh={setListState}
+                    refreshState={this.state.listState}
+                    onHeaderRefresh={this._handleRefresh}
                     footerContainerStyle={{height: navHeight*1.5}}
 
                     footerNoMoreDataComponent={this._renderNoMoreData()}
@@ -137,38 +162,59 @@ export default function BlockedScreen({navigation}) {
         );
     }
 
-    return (
-        <SlidingPanel
-            ref={component => { 
-                filterSlidingPanel = component; 
-            }}
-            allowDragging = {false}
-            allowAnimation = {false}
-            onAnimationStop = {() => isfilterSlidingPanelOpen = !isfilterSlidingPanelOpen}
-            panelPosition= "top"
-            headerLayoutHeight = {height}
-            headerLayout = {this._renderBody}
-            slidingPanelLayout = { () => 
-                <View style={styles.slidingPanelLayoutStyle}>
-                    <SegmentedControlTab
-                        values={['Videos', 'Channels', 'Titles']}
-                        selectedIndex={selectedIndex}
-                        tabStyle={styles.tabStyle}
-                        tabTextStyle={styles.tabTextStyle}
-                        activeTabStyle={styles.activeTabStyle}
-                        onTabPress={setSelectedIndex}
-                    />
-                </View>
-            }
-            AnimationSpeed = {500}
-            slidingPanelLayoutHeight = {navHeight}
-        />
-    );
+    render() {
+        return (
+            <SlidingPanel
+                ref={component => { 
+                    filterSlidingPanel = component; 
+                }}
+                allowDragging = {false}
+                allowAnimation = {false}
+                onAnimationStop = {() => isfilterSlidingPanelOpen = !isfilterSlidingPanelOpen}
+                panelPosition= "top"
+                headerLayoutHeight = {height}
+                headerLayout = {this._renderBody}
+                slidingPanelLayout = { () => 
+                    <View style={styles.slidingPanelLayoutStyle}>
+                        <SegmentedControlTab
+                            values={['Videos', 'Channels', 'Titles']}
+                            selectedIndex={this.state.selectedIndex}
+                            tabStyle={styles.tabStyle}
+                            tabTextStyle={styles.tabTextStyle}
+                            activeTabStyle={styles.activeTabStyle}
+                            onTabPress={this.handleSingleIndexSelect}
+                        />
+                    </View>
+                }
+                AnimationSpeed = {500}
+                slidingPanelLayoutHeight = {navHeight}
+            />
+        );
+    }
 }
 
-BlockedScreen.navigationOptions = ({ navigation }) => ({
+function mapStateToProps(state, ownProps){
+    return {
+        blockedVideos: state.blockedVideos,
+        blockedChannels: state.blockedChannels,
+        blockedTitles: state.blockedTitles,
+        loading: state.loading,
+        error: state.error,
+    }
+}
+function mapDispatchToProps(actions){
+    return {
+        getBlockedContent: actions.getBlockedContent
+    }
+}
+
+const wrappedComp = connect(BlockedStateContext, mapStateToProps, mapDispatchToProps)(BlockedScreen)
+wrappedComp.navigationOptions = ({ navigation }) => ({
     headerBackground: (
         <Header
+            ref={component => { 
+                this.header = component; 
+            }}
             leftView={ <View style={{flex:0.2, flexDirection:'row', paddingHorizontal: 10,}}>
                             <Image source={require('../assets/images/logo.png')} style={{flex: 1, height:navHeight}} resizeMode='contain' />
                         </View>
@@ -222,6 +268,7 @@ BlockedScreen.navigationOptions = ({ navigation }) => ({
         </Header>
     )
 });
+export default wrappedComp
 
 const styles = StyleSheet.create({
     headerLayoutStyle: {

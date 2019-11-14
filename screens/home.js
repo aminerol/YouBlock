@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useLayoutEffect } from 'react';
+import React, { useState, useEffect, useLayoutEffect, PureComponent } from 'react';
 import {
   Platform,
   StyleSheet,
@@ -18,50 +18,41 @@ import EmptyContent from '../Components/emptyContent';
 import FlatListEx, {RefreshState} from '../Components/FlatList';
 import { getNavBarHeight } from 'react-native-platform-helper';
 import LogUtils from '../utils/LogUtils';
-import { useBlockedState } from '../Context/Blocked';
+import { BlockedStateContext } from '../Context/Blocked';
 import countRenders from '../utils/countRender';
+import connect from '../Context/connect';
 var _ = require('lodash');
 
-export default function HomeScreen({navigation}) {
+//const [ {blockedVideos, blockedChannels, blockedTitles, loading}, actions ] = useBlockedState()
 
-    const [ {blockedVideos, blockedChannels, blockedTitles, loading}, actions ] = useBlockedState()
-    
-    const [ videos, setVideos ] = useState([])
-    const [ fetchLoading, setFetchLoading ] = useState(true)
-    const [ listState, setListState ] = useState(RefreshState.Idle)
-    const [ error, setError ] = useState(RefreshState.Idle)
-    let inProgressNetworkReq = false
+class HomeScreen extends PureComponent {
 
-    useEffect(() => {
-      actions.getBlockedContent()
-    }, [])
-
-    useEffect(() => {
-      !loading && fetchData(false, false);
-    }, [loading])
-
-    useEffect(() => {
-      if(listState == RefreshState.FooterRefreshing)
-      {
-        fetchData(true, false);
+    constructor(props){
+      super(props)
+      this.inProgressNetworkReq = false
+      this.state = {
+        videos: [],
+        loading: true,
+        listState: RefreshState.Idle,
+        error: null
       }
-      if(listState == RefreshState.HeaderRefreshing)
-      {
-        fetchData(false, true);
-      }  
-    }, [listState])
+    }
+  
+    componentDidMount() {
+      this.fetchData(false, false);
+    }
 
     fetchData = (pagination, isReload) => {
-      if (!inProgressNetworkReq) {
-        inProgressNetworkReq = true;
+      if (!this.inProgressNetworkReq) {
+        this.inProgressNetworkReq = true;
         YoutubeAPI.getHomeVideos(pagination, isReload).then(homeResults => {
 
-          var result = _.uniqBy([...videos, ...homeResults], 'id');
+          var result = _.uniqBy([...this.state.videos, ...homeResults], 'id');
 
-          _.intersectionWith(result, blockedVideos, (x,y) => {
+          _.intersectionWith(result, this.props.blockedVideos, (x,y) => {
             _.merge(x, x.id === y.id && {'blocked': true})
           });
-          _.intersectionWith(result, blockedChannels, (x,y) => {
+          _.intersectionWith(result, this.props.blockedChannels, (x,y) => {
             _.merge(x, x.owner.id === y.id && {'owner': {'blocked': true}})
           });
 
@@ -74,27 +65,35 @@ export default function HomeScreen({navigation}) {
             currentListState = RefreshState.Idle
           }
 
-          setVideos(result)
-          setFetchLoading(false)
-          setListState(currentListState)
-          inProgressNetworkReq = false;
+          this.setState({
+            videos: result,
+            loading: false,
+            listState: currentListState
+          })
+          this.inProgressNetworkReq = false;
 
         }).catch(error => {
           console.error(error);
-          setError(error)
-          setFetchLoading(false)
-          setListState(RefreshState.Failure)
-          inProgressNetworkReq = false;
+          this.setState({
+            error: error,
+            loading: false,
+            listState: RefreshState.Failure
+          })
+          this.inProgressNetworkReq = false;
         });
       }
     }
 
     _handleLoadMore = () => {
-      setListState(RefreshState.FooterRefreshing)
+      this.setState({listState: RefreshState.FooterRefreshing}, () => {
+        this.fetchData(true, false);
+      })
     };
 
     _handleRefresh = () => {
-      setListState(RefreshState.HeaderRefreshing)
+      this.setState({listState: RefreshState.HeaderRefreshing}, () => {
+        this.fetchData(false, true);
+      })
     };
 
     _renderLoadingMore = () => {
@@ -120,35 +119,46 @@ export default function HomeScreen({navigation}) {
     };
 
     _renderItem = ({item}) => (
-      <HomeVideoItem  video={item} actions={actions}/>
+      <HomeVideoItem  video={item}/>
     );
 
-    return (
-      !fetchLoading ? (
-        <View style={styles.headerLayoutStyle}>
-            <FlatListEx
-                data={videos}
-                renderItem={this._renderItem}
-                keyExtractor={item => item.id.toString()}
-
-                refreshState={listState}
-                onHeaderRefresh={this._handleRefresh}
-                onFooterRefresh={this._handleLoadMore}
-
-                footerRefreshingComponent={this._renderLoadingMore()}
-                footerNoMoreDataComponent={this._renderNoMoreData()}
-                footerEmptyDataComponent={this._renderEmptyData()}
-              />
+    render(){
+      return (
+        !this.state.loading ? (
+          <View style={styles.headerLayoutStyle}>
+              <FlatListEx
+                  data={this.state.videos}
+                  renderItem={this._renderItem}
+                  keyExtractor={item => item.id.toString()}
+  
+                  refreshState={this.state.listState}
+                  onHeaderRefresh={this._handleRefresh}
+                  onFooterRefresh={this._handleLoadMore}
+  
+                  footerRefreshingComponent={this._renderLoadingMore()}
+                  footerNoMoreDataComponent={this._renderNoMoreData()}
+                  footerEmptyDataComponent={this._renderEmptyData()}
+                />
+            </View>
+        ) : (
+          <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center'}} >
+            <ActivityIndicator size="large" color={'#007aff'} />
           </View>
-      ) : (
-        <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center'}} >
-          <ActivityIndicator size="large" color={'#007aff'} />
-        </View>
+        )
       )
-    )
+    }
 }
 
-HomeScreen.navigationOptions = ({ navigation }) => ({
+function mapStateToProps(state, ownProps){
+  return {
+    blockedVideos: state.blockedVideos,
+    blockedChannels: state.blockedChannels,
+    blockedTitles: state.blockedTitles
+  }
+}
+
+const wrappedComp = connect(BlockedStateContext, mapStateToProps)(HomeScreen)
+wrappedComp.navigationOptions = ({ navigation }) => ({
   headerLeft: (
       <View style={{flex:1, flexDirection:'row', justifyContent: 'center', paddingHorizontal: 10}}>
           <Image source={require('../assets/images/logo.png')} style={{width:100, height:getNavBarHeight()}} resizeMode='contain' />
@@ -169,6 +179,7 @@ HomeScreen.navigationOptions = ({ navigation }) => ({
       </View>
   ),
 });
+export default wrappedComp
 
 const styles = StyleSheet.create({
     headerLayoutStyle: {
