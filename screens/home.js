@@ -16,44 +16,39 @@ import YoutubeAPI from '../services/youtube';
 import HomeVideoItem from '../Components/homeVideoItem';
 import EmptyContent from '../Components/emptyContent';
 import FlatListEx, {RefreshState} from '../Components/FlatList';
-import LocalStorage from '../services/localStorage';
 import { getNavBarHeight } from 'react-native-platform-helper';
 import LogUtils from '../utils/LogUtils';
 import { useBlockedState } from '../Context/Blocked';
+import countRenders from '../utils/countRender';
 var _ = require('lodash');
 
 export default function HomeScreen({navigation}) {
 
-    const [ {blockedVideos, blockedChannels, blockedTitles}, actions ] = useBlockedState()
-
+    const [ {blockedVideos, blockedChannels, blockedTitles, loading}, actions ] = useBlockedState()
+    
     const [ videos, setVideos ] = useState([])
-    const [ loading, setLoading ] = useState(true)
+    const [ fetchLoading, setFetchLoading ] = useState(true)
     const [ listState, setListState ] = useState(RefreshState.Idle)
     const [ error, setError ] = useState(RefreshState.Idle)
     let inProgressNetworkReq = false
 
-    useLayoutEffect(() => {
-      _.map(videos, (x) => _.update(x, 'blocked', () => false) );
-      _.intersectionWith(videos, blockedVideos, (x,y) =>  _.merge(x, x.id === y.id && {'blocked': true}));
-      setVideos(videos)
-    }, [blockedVideos])
-
-    useLayoutEffect(() => {
-      _.map(videos, (x) => _.update(x, 'owner.blocked', () => false) );
-      _.intersectionWith(videos, blockedChannels, (x,y) =>  _.merge(x, x.owner.id === y.id && {'owner': {'blocked': true}}));
-      setVideos(videos)
-    }, [blockedChannels])
-
     useEffect(() => {
-      fetchData(false, false);
+      actions.getBlockedContent()
     }, [])
 
     useEffect(() => {
-      if(listState == RefreshState.FooterRefreshing) 
-        fetchData(true, false);
+      !loading && fetchData(false, false);
+    }, [loading])
 
-      if(listState == RefreshState.HeaderRefreshing) 
+    useEffect(() => {
+      if(listState == RefreshState.FooterRefreshing)
+      {
+        fetchData(true, false);
+      }
+      if(listState == RefreshState.HeaderRefreshing)
+      {
         fetchData(false, true);
+      }  
     }, [listState])
 
     fetchData = (pagination, isReload) => {
@@ -80,14 +75,14 @@ export default function HomeScreen({navigation}) {
           }
 
           setVideos(result)
-          setLoading(false)
+          setFetchLoading(false)
           setListState(currentListState)
           inProgressNetworkReq = false;
 
         }).catch(error => {
           console.error(error);
           setError(error)
-          setLoading(false)
+          setFetchLoading(false)
           setListState(RefreshState.Failure)
           inProgressNetworkReq = false;
         });
@@ -125,19 +120,11 @@ export default function HomeScreen({navigation}) {
     };
 
     _renderItem = ({item}) => (
-      <HomeVideoItem 
-        video={item} 
-        onVideoBlocked={(isblocked, id)=> {
-          _.set(_.find(videos, ['id', id]), 'blocked', isblocked)
-        }}
-        onChannelBlocked={(isblocked, id)=> {
-          _.set(_.find(videos, ['owner.id', id]), 'owner.blocked', isblocked)
-        }}
-      />
+      <HomeVideoItem  video={item} actions={actions}/>
     );
 
     return (
-      !loading ? (
+      !fetchLoading ? (
         <View style={styles.headerLayoutStyle}>
             <FlatListEx
                 data={videos}
