@@ -25,26 +25,40 @@ export const getBlockedContentFail = (error) => {
 }
 
 export const blockVideo = (video) => async (state, dispatch) => {
-    LocalStorage.push(  constants.BLOCKED_VIDEOS_STORAGE_KEY, 
-                        video, 
-                        {isExist: true, predicate: item => item.id === video.id }
-                ).then(pushed => {
+    LocalStorage.push(  
+        constants.BLOCKED_VIDEOS_STORAGE_KEY, 
+        video, 
+        {isExist: true, predicate: item => item.id === video.id }
+    ).then(pushed => {
         pushed && dispatch({ type: constants.BLOCK_VIDEO, video: video })
     })
 }
-// export const unBlockVideo = (video) => ({
-//     type: constants.UNBLOCK_VIDEO,
-//     payload: video
-// })
+export const unBlockVideo = (video) => async (state, dispatch) => {
+    LocalStorage.pop(constants.BLOCKED_VIDEOS_STORAGE_KEY, video.id, {path: 'id'}).then(()=>{
+        dispatch({
+            type: constants.UNBLOCK_VIDEO,
+            videoId: video.id
+        })
+    })
+}
 
-// export const blockChannel = (channel) => ({
-//     type: constants.BLOCK_CHANNEL,
-//     payload: channel
-// })
-// export const unBlockChannel = (channel) => ({
-//     type: constants.UNBLOCK_CHANNEL,
-//     payload: channel
-// })
+export const blockChannel = (channel) => async (state, dispatch) => {
+    LocalStorage.push(  
+        constants.BLOCKED_CHANNELS_STORAGE_KEY, 
+        channel, 
+        {isExist: true, predicate: item => item.id === channel.id }
+    ).then((pushed) => {
+        pushed && dispatch({ type: constants.BLOCK_CHANNEL, channel: channel })
+    })
+}
+export const unBlockChannel = (channel) => async (state, dispatch) => {
+    LocalStorage.pop(constants.BLOCKED_CHANNELS_STORAGE_KEY, channel.id, {path: 'id'}).then(()=>{
+        dispatch({
+            type: constants.UNBLOCK_CHANNEL,
+            channel: channel
+        })
+    })
+}
 
 // export const blockTitle = (title) => ({
 //     type: constants.BLOCK_TITLE,

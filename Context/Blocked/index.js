@@ -6,7 +6,7 @@ const initialState = {
     blockedVideos: [],
     blockedChannels: [],
     blockedTitles: [],
-    loading: false,
+    loading: true,
     error: null
 }
 
@@ -18,9 +18,10 @@ const {
 
 const useBlockedState = useStateValue
 const BlockedState = StateProvider
+const BlockedStateContext = StateContext
 
 export {
     useBlockedState, 
     BlockedState,
-    StateContext
+    BlockedStateContext
 }

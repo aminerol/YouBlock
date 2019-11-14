@@ -8,8 +8,8 @@ export const BLOCKED_CHANNELS_STORAGE_KEY = 'blockedChannels'
 export const BLOCKED_TITLES_STORAGE_KEY = 'blockedTitles'
 
 export const BLOCK_VIDEO = 'BLOCK_VIDEO';
-// export const UNBLOCK_VIDEO = 'UNBLOCK_VIDEO';
-// export const BLOCK_CHANNEL = 'BLOCK_CHANNEL';
-// export const UNBLOCK_CHANNEL = 'UNBLOCK_CHANNEL';
+export const UNBLOCK_VIDEO = 'UNBLOCK_VIDEO';
+export const BLOCK_CHANNEL = 'BLOCK_CHANNEL';
+export const UNBLOCK_CHANNEL = 'UNBLOCK_CHANNEL';
 // export const BLOCK_TITLE = 'BLOCK_TITLE';
 // export const UNBLOCK_TITLE = 'UNBLOCK_TITLE';

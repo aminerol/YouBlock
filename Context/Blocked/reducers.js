@@ -5,18 +5,9 @@ export default function blockedReducer(state, action){
         case constants.GET_BLOCKED_CONTENT_SUCESS:
             return {
                 ...state,
-                blockedVideos: [
-                    ...state.blockedVideos,
-                    ...action.blockedVideos || []
-                ],
-                blockedChannels: [
-                    ...state.blockedChannels,
-                    ...action.blockedChannels || []
-                ],
-                blockedTitles: [
-                    ...state.blockedTitles,
-                    ...action.blockedTitles || []
-                ],
+                blockedVideos: action.blockedVideos,
+                blockedChannels: action.blockedChannels,
+                blockedTitles: action.blockedTitles ,
                 loading: action.loading
             }
         case constants.GET_BLOCKED_CONTENT_FAIL:
@@ -33,10 +24,29 @@ export default function blockedReducer(state, action){
         case constants.BLOCK_VIDEO:
             return {
                 ...state,
-                videos: [
-                    ...state.videos,
+                blockedVideos: [
+                    ...state.blockedVideos,
                     action.video
                 ],
+            }
+        case constants.UNBLOCK_VIDEO:
+            const newState = {
+                ...state,
+                blockedVideos: state.blockedVideos.filter(item => item.id !== action.videoId)
+            }
+            return newState
+        case constants.BLOCK_CHANNEL:
+            return {
+                ...state,
+                blockedChannels: [
+                    ...state.blockedChannels,
+                    action.channel
+                ],
+            }
+        case constants.UNBLOCK_CHANNEL:
+            return {
+                ...state,
+                blockedChannels: state.blockedChannels.filter(item => item.id !== action.channel.id)
             }
         // case constants.UNBLOCK_VIDEO:
         //     return action.payload
