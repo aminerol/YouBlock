@@ -13,24 +13,20 @@ import EmptyContent from '../Components/emptyContent';
 import FlatListEx, {RefreshState} from '../Components/FlatList';
 import YoutubeAPI from '../services/youtube';
 import LocalStorage from '../services/localStorage';
+import { BlockedStateContext } from '../Context/Blocked';
+import connect from '../Context/connect';
 const { width, height } = Dimensions.get('window');
 var _ = require('lodash');
 
 
 @withNavigation
-export default class ResultScreen extends React.Component {
-    static navigationOptions =({navigation})=> {
-      return {
-        title: navigation.getParam('searchText'),
-      };
-    };
-
+class ResultScreen extends React.Component {
+    
     constructor(props){
       super(props);
       this.state = {
         loading: true,
         videos: [],
-        count: 0,
         error: null,
         listState: RefreshState.Idle,
       };
@@ -39,31 +35,9 @@ export default class ResultScreen extends React.Component {
 
     componentWillMount() {
       BackHandler.addEventListener('hardwareBackPress', this.backButtonClick);
-
-      this.focusListener = this.props.navigation.addListener('didFocus', () => {
-        
-        LocalStorage.get(["blockedVideos", "blockedChannels"]).then(blockedContent => {
-
-          _.map(this.state.videos, (x)=>{
-            _.update(x, 'blocked', (n)=>{ return false});
-            _.update(x, 'owner.blocked', (n)=>{ return false});
-          });
-
-          _.intersectionWith(this.state.videos, blockedContent[0], (x,y) => {
-            _.merge(x, x.id === y.id && {'blocked': true})
-          });
-          _.intersectionWith(this.state.videos, blockedContent[1], (x,y) => {
-            _.merge(x, x.owner.id === y.id && {'owner': {'blocked': true}})
-          });
-          this.setState({
-            videos: this.state.videos,
-          })
-        })
-      });
     }
   
     componentWillUnmount(){
-      this.focusListener.remove();
       BackHandler.removeEventListener('hardwareBackPress', this.backButtonClick);
     }
 
@@ -79,32 +53,29 @@ export default class ResultScreen extends React.Component {
         YoutubeAPI.search(this.props.navigation.getParam('searchText'), pagination).then(videos => {
 
           var result = _.uniqBy([...this.state.videos, ...videos], 'id');
-          LocalStorage.get(["blockedVideos", "blockedChannels"]).then(blockedContent => {
-            
-            _.intersectionWith(result, blockedContent[0], (x,y) => {
-              _.merge(x, x.id === y.id && {'blocked': true})
-            });
-            _.intersectionWith(result, blockedContent[1], (x,y) => {
-              _.merge(x, x.owner.id === y.id && {'owner': {'blocked': true}})
-            });
+          _.intersectionWith(result, this.props.blockedVideos, (x,y) => {
+            _.merge(x, x.id === y.id && {'blocked': true})
+          });
+          _.intersectionWith(result, this.props.blockedChannels, (x,y) => {
+            _.merge(x, x.owner.id === y.id && {'owner': {'blocked': true}})
+          });
 
-            let currentListState = {}
-            if(pagination && _.isEmpty(videos)){
-              currentListState = RefreshState.NoMoreData
-            }else if (!pagination && _.isEmpty(videos)){
-              currentListState = RefreshState.EmptyData
-            }else{
-              currentListState = RefreshState.Idle
-            }
+          let currentListState = {}
+          if(pagination && _.isEmpty(videos)){
+            currentListState = RefreshState.NoMoreData
+          }else if (!pagination && _.isEmpty(videos)){
+            currentListState = RefreshState.EmptyData
+          }else{
+            currentListState = RefreshState.Idle
+          }
 
-            this.setState({
-              videos: result,
-              loading: false,
-              listState: currentListState,
-            })
-
-            this.inProgressNetworkReq = false;
+          this.setState({
+            videos: result,
+            loading: false,
+            listState: currentListState,
           })
+
+          this.inProgressNetworkReq = false;
 
         }).catch(error => {
           console.error(error);
@@ -153,12 +124,6 @@ export default class ResultScreen extends React.Component {
     _renderItem = ({item}) => (
       <SearchVideoItem 
         video={item}
-        onVideoBlocked={(isblocked, id)=> {
-          _.set(_.find(this.state.videos, ['id', id]), 'blocked', isblocked)
-        }}
-        onChannelBlocked={(isblocked, id)=> {
-          _.set(_.find(this.state.videos, ['owner.id', id]), 'owner.blocked', isblocked)
-        }}
       />
     );
 
@@ -204,6 +169,21 @@ export default class ResultScreen extends React.Component {
       }
     }
 }
+
+function mapStateToProps(state, ownProps){
+  return {
+    blockedVideos: state.blockedVideos,
+    blockedChannels: state.blockedChannels,
+  }
+}
+
+const wrappedComp = connect(BlockedStateContext, mapStateToProps)(ResultScreen)
+wrappedComp.navigationOptions =({navigation})=> {
+  return {
+    title: navigation.getParam('searchText'),
+  };
+};
+export default wrappedComp
 
 const styles = StyleSheet.create({
     headerLayoutStyle: {

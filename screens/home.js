@@ -23,8 +23,6 @@ import countRenders from '../utils/countRender';
 import connect from '../Context/connect';
 var _ = require('lodash');
 
-//const [ {blockedVideos, blockedChannels, blockedTitles, loading}, actions ] = useBlockedState()
-
 class HomeScreen extends PureComponent {
 
     constructor(props){
@@ -153,7 +151,6 @@ function mapStateToProps(state, ownProps){
   return {
     blockedVideos: state.blockedVideos,
     blockedChannels: state.blockedChannels,
-    blockedTitles: state.blockedTitles
   }
 }
 
