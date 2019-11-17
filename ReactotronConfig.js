@@ -3,7 +3,7 @@ import Reactotron, { asyncStorage } from "reactotron-react-native"
 const reactron = Reactotron
   .configure({
     name: "App",
-    host: "192.168.1.105",
+    host: "192.168.1.27",
     onConnect: ()=>{
         Reactotron.clear();
         reactron.clear();
