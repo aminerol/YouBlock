@@ -48,16 +48,24 @@ export default function blockedReducer(state, action){
                 ...state,
                 blockedChannels: state.blockedChannels.filter(item => item.id !== action.channel.id)
             }
-        // case constants.UNBLOCK_VIDEO:
-        //     return action.payload
-        // case constants.BLOCK_CHANNEL:
-        //     return action.payload
-        // case constants.UNBLOCK_CHANNEL:
-        //     return action.payload
-        // case constants.BLOCK_TITLE:
-        //     return action.payload
-        // case constants.UNBLOCK_TITLE:
-        //     return action.payload
+        case constants.UPDATE_CHANNEL:
+            return {
+                ...state,
+                blockedChannels: state.blockedChannels.map(item => item.id === action.oldChannel.id ? action.newChannel : item)
+            }
+        case constants.BLOCK_TITLE:
+            return {
+                ...state,
+                blockedTitles: [
+                    ...state.blockedTitles,
+                    action.title
+                ],
+            }
+        case constants.UNBLOCK_TITLE:
+            return {
+                ...state,
+                blockedTitles: state.blockedTitles.filter(item => item !== action.title)
+            }
         default:
             return state
     }

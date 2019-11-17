@@ -59,13 +59,28 @@ export const unBlockChannel = (channel) => async (state, dispatch) => {
         })
     })
 }
+export const updateChannel = (oldChannel, newChannel) => async (state, dispatch) => {
+    LocalStorage.set(constants.BLOCKED_CHANNELS_STORAGE_KEY, oldChannel.id, {path: 'id', newValue: newChannel}).then(
+        dispatch({ type: constants.UPDATE_CHANNEL, oldChannel, newChannel })
+    )
+    
+}
 
-// export const blockTitle = (title) => ({
-//     type: constants.BLOCK_TITLE,
-//     payload: title
-// })
-// export const unBlockTitle = (title) => ({
-//     type: constants.UNBLOCK_TITLE,
-//     payload: title
-// })
+export const blockTitle = (title) => async (state, dispatch) => {
+    LocalStorage.push(  
+        constants.BLOCKED_TITLES_STORAGE_KEY, 
+        title, 
+        {isExist: true}
+    ).then((pushed) => {
+        pushed && dispatch({ type: constants.BLOCK_TITLE, title: title })
+    })
+}
+export const unBlockTitle = (title) => async (state, dispatch) => {
+    LocalStorage.pop(constants.BLOCKED_TITLES_STORAGE_KEY, title).then(()=>{
+        dispatch({
+            type: constants.UNBLOCK_TITLE,
+            title: title
+        })
+    })
+}
 
