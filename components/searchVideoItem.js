@@ -7,70 +7,73 @@ import ActionSheet from './actionSheet'
 import DoubleTap from './doubleTap'
 import LogUtils from '../utils/LogUtils';
 import YoutubeAPI from '../services/youtube';
+import { BlockedStateContext } from '../Context/Blocked';
+import connect from '../Context/connect';
 const AnimatedIcon = Animated.createAnimatedComponent(Ionicons);
 var _ = require('lodash');
 const { width, height } = Dimensions.get('window');
 
 
-export default class SearchVideoItem extends PureComponent {
+class SearchVideoItem extends PureComponent {
 
   animatedValue = new Animated.Value(0);
 
   constructor(props) {
     super(props);
     this.video = this.props.video;
-    this.cuurentOverlay  = 'none';
+    this.curentOverlay  = 'none';
     this.state = {
       isVideoBlocked: this.video.blocked,
       isChannelBlocked: this.video.owner.blocked
     }
   }
 
-  componentWillReceiveProps(nextProps) {
+  componentWillReceiveProps(nextProps, nextState){
     this.setState({
-      isVideoBlocked: nextProps.video.blocked,
-      isChannelBlocked: nextProps.video.owner.blocked
+      isVideoBlocked: nextProps.blockedVideos.some(item => item.id === this.video.id),
+      isChannelBlocked: nextProps.blockedChannels.some(item => item.id === this.video.owner.id)
     })
   }
 
   _handleVideoBlocking = () => {
-    this.cuurentOverlay = 'video';
-    const mergedObject = _.merge(this.video, {type: 'video'})
     this.setState((state) => {
+      this.curentOverlay = 'video';
       const newBlocked = !state.isVideoBlocked;
+      const mergedObject = _.merge({}, this.video, {type: 'video', 'blocked': newBlocked})
       if (newBlocked) {
-        LocalStorage.push("blockedVideos", mergedObject, {isExist: true, predicate: (item) => {return item.id === mergedObject.id}})
         Animated.sequence([
           Animated.spring(this.animatedValue, { toValue: 1 }),
           Animated.spring(this.animatedValue, { toValue: 0 }),
-        ]).start();
+        ]).start(()=>{
+          this.props.blockVideo(mergedObject)
+        });
       } else {
-        LocalStorage.pop("blockedVideos", mergedObject.id, {path: 'id'})
+        this.props.unBlockVideo(mergedObject)
       }
-      this.props.onVideoBlocked(newBlocked, mergedObject.id);
       return { isVideoBlocked: newBlocked };
     });
   };
 
   _handleChannelBlocking = () => {
-    this.cuurentOverlay = 'channel';
-    let mergedObject =  { ...this.video.owner, type: 'channel' }
     this.setState((state) => {
       const newBlocked = !state.isChannelBlocked;
+      this.curentOverlay = 'channel';
+      const channel =  { ...this.video.owner, type: 'channel' }
       if (newBlocked) {
-        LocalStorage.push("blockedChannels", mergedObject, {isExist: true, predicate: (item) => {return item.id === mergedObject.id}})
+        
         Animated.sequence([
           Animated.spring(this.animatedValue, { toValue: 1 }),
           Animated.spring(this.animatedValue, { toValue: 0 }),
-        ]).start();
-        YoutubeAPI.getChannelInfo(mergedObject.id).then(async channelInfo => {
-          mergedObject = {...mergedObject, videoCount: channelInfo.videoCount, subscriberCount: channelInfo.subscriberCount, thumbnail: channelInfo.thumbnail}
-          await LocalStorage.set("blockedChannels", mergedObject.id, {path: 'id', newValue: mergedObject})
-        })
+        ]).start(()=>{
+          this.props.blockChannel(channel)
+          YoutubeAPI.getChannelInfo(channel.id).then(async channelInfo => {
+            const mergedObject = {...channel, videoCount: channelInfo.videoCount, subscriberCount: channelInfo.subscriberCount, thumbnail: channelInfo.thumbnail}
+            this.props.updateChannel(channel, mergedObject)
+          })
+        });          
       } else {
-        LocalStorage.pop("blockedChannels", mergedObject.id, {path: 'id'})
+        this.props.unBlockChannel(channel)
       }
-      this.props.onChannelBlocked(newBlocked, mergedObject.id);
       return { isChannelBlocked: newBlocked };
     });
   };
@@ -90,7 +93,7 @@ export default class SearchVideoItem extends PureComponent {
         ],
       },
     ];
-    return this.cuurentOverlay == 'video' ? (
+    return this.curentOverlay == 'video' ? (
             <View style={styles.overlay}>
               <AnimatedIcon name="md-eye-off" size={50} color="#FF0000" style={imageStyles}/>
             </View>
@@ -166,6 +169,25 @@ export default class SearchVideoItem extends PureComponent {
     )
   }
 }
+
+function mapStateToProps(state, ownProps){
+  return {
+    blockedVideos: state.blockedVideos,
+    blockedChannels: state.blockedChannels,
+  }
+}
+
+function mapDispatchToProps(actions){
+  return {
+    blockVideo: actions.blockVideo,
+    unBlockVideo: actions.unBlockVideo,
+    blockChannel: actions.blockChannel,
+    unBlockChannel: actions.unBlockChannel,
+    updateChannel: actions.updateChannel
+  }
+}
+
+export default connect(BlockedStateContext, mapStateToProps, mapDispatchToProps)(SearchVideoItem)
 
 const styles = StyleSheet.create({
   container: {

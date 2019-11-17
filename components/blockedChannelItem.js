@@ -9,18 +9,20 @@ import LogUtils from '../utils/LogUtils';
 import YoutubeAPI from '../services/youtube';
 const AnimatedIcon = Animated.createAnimatedComponent(Ionicons);
 import ContentLoader from 'react-native-easy-content-loader';
+import connect from '../Context/connect';
+import { BlockedStateContext } from '../Context/Blocked';
 var _ = require('lodash');
 const { width, height } = Dimensions.get('window');
 
 
-export default class BlockedChannelItem extends PureComponent {
+class BlockedChannelItem extends PureComponent {
 
   animatedValue = new Animated.Value(0);
 
   constructor(props) {
     super(props);
     this.channel = this.props.channel;
-    LogUtils.log('this.channel', this.channel)
+    
     this.state = {
       isChannelBlocked: true,
       subscriberCount: this.channel.subscriberCount,
@@ -28,43 +30,28 @@ export default class BlockedChannelItem extends PureComponent {
     }
   }
 
-  componentDidMount() {
-    LocalStorage.after('blockedChannels', {
-      set: function ({ key, value, method, options }) {
-        if(this.channel.id === value){
-          const { subscriberCount, videoCount } = options.newValue
-          this.setState({subscriberCount, videoCount})
-        }
-      }
-    }, this)
-  }
-  componentWillUnmount = async () => {
-    await LocalStorage.destroy();
-  };
-
-  componentWillReceiveProps(nextProps) {
-    this.setState({
-      isChannelBlocked: nextProps.channel.blocked ? false : true,
-    })
+  componentWillReceiveProps(nextProps, nextState){
+    this.setState({subscriberCount: nextProps.channel.subscriberCount, videoCount: nextProps.channel.videoCount})
   }
   
   _handleChannelBlocking = () => {
     this.setState((state) => {
       const newBlocked = !state.isChannelBlocked;
       if (newBlocked) {
-        LocalStorage.push("blockedChannels", this.channel, {isExist: true, predicate: (item) => {return item.id === this.channel.id}})
+        
         Animated.sequence([
           Animated.spring(this.animatedValue, { toValue: 1 }),
           Animated.spring(this.animatedValue, { toValue: 0 }),
-        ]).start();
-        YoutubeAPI.getChannelInfo(this.channel.id).then(async channelInfo => {
+        ]).start(()=>{
+          this.props.blockChannel(this.channel)
+          YoutubeAPI.getChannelInfo(this.channel.id).then(async channelInfo => {
             mergedObject = {...this.channel, videoCount: channelInfo.videoCount, subscriberCount: channelInfo.subscriberCount, thumbnail: channelInfo.thumbnail}
-            await LocalStorage.set("blockedChannels", this.channel.id, {path: 'id', newValue: mergedObject})
-        })
+            this.props.updateChannel(this.channel, mergedObject)
+          })
+        });
       } else {
-        LocalStorage.pop("blockedChannels", this.channel.id, {path: 'id'})
+        this.props.unBlockChannel(this.channel)
       }
-      this.props.onChannelBlocked(newBlocked, this.channel.id);
       return { isChannelBlocked: newBlocked };
     });
   };
@@ -90,8 +77,6 @@ export default class BlockedChannelItem extends PureComponent {
         </View>
       )
   }
-
-
 
   render() { 
     return (
@@ -165,6 +150,16 @@ export default class BlockedChannelItem extends PureComponent {
     )
   }
 }
+
+function mapDispatchToProps(actions){
+  return {
+    blockChannel: actions.blockChannel,
+    unBlockChannel: actions.unBlockChannel,
+    updateChannel: actions.updateChannel
+  }
+}
+
+export default connect(BlockedStateContext, null, mapDispatchToProps)(BlockedChannelItem)
 
 const styles = StyleSheet.create({
   container: {

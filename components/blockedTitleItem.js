@@ -1,6 +1,5 @@
 import React, { PureComponent } from 'react';
 import {  View, Text, TextInput, StyleSheet, Platform } from 'react-native';
-import LocalStorage from '../services/localStorage';
 import { Ionicons } from '@expo/vector-icons';
 import Swipeout from 'react-native-swipeout';
 

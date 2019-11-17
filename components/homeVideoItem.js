@@ -59,19 +59,21 @@ class HomeVideoItem extends PureComponent {
     this.setState((state) => {
       const newBlocked = !state.isChannelBlocked;
       this.curentOverlay = 'channel';
-      let mergedObject =  { ...this.video.owner, type: 'channel' }
+      const channel =  { ...this.video.owner, type: 'channel' }
       if (newBlocked) {
-        this.props.blockChannel(mergedObject)
+        
         Animated.sequence([
           Animated.spring(this.animatedValue, { toValue: 1 }),
           Animated.spring(this.animatedValue, { toValue: 0 }),
-        ]).start();
-        YoutubeAPI.getChannelInfo(mergedObject.id).then(async channelInfo => {
-          mergedObject = {...mergedObject, videoCount: channelInfo.videoCount, subscriberCount: channelInfo.subscriberCount, thumbnail: channelInfo.thumbnail}
-          await LocalStorage.set("blockedChannels", mergedObject.id, {path: 'id', newValue: mergedObject})
-        })
+        ]).start(()=>{
+          this.props.blockChannel(channel)
+          YoutubeAPI.getChannelInfo(channel.id).then(async channelInfo => {
+            const mergedObject = {...channel, videoCount: channelInfo.videoCount, subscriberCount: channelInfo.subscriberCount, thumbnail: channelInfo.thumbnail}
+            this.props.updateChannel(channel, mergedObject)
+          })
+        });          
       } else {
-        this.props.unBlockChannel(mergedObject)
+        this.props.unBlockChannel(channel)
       }
       return { isChannelBlocked: newBlocked };
     });
@@ -180,6 +182,7 @@ function mapDispatchToProps(actions){
     unBlockVideo: actions.unBlockVideo,
     blockChannel: actions.blockChannel,
     unBlockChannel: actions.unBlockChannel,
+    updateChannel: actions.updateChannel
   }
 }
 
