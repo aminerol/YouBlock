@@ -31,6 +31,8 @@ import countRenders from '../utils/countRender';
 const { width, height } = Dimensions.get('window');
 var _ = require('lodash');
 let filterSlidingPanel = {};
+let segmentedControlTab = {}
+let searchBar = {}
 let isfilterSlidingPanelOpen = false;
 const navHeight = getNavBarHeight();
 
@@ -38,13 +40,32 @@ class BlockedScreen extends PureComponent {
 
     constructor(props) {
         super(props);
+        this.lastQuery = ''
         this.state = {
             selectedIndex: 0,
             listState: RefreshState.Idle,
+            filtredItems: [],
+            searchMode: false
         };
     }
 
     componentDidMount(){
+        this.props.navigation.setParams({
+            handleSearch: this.handleSearch,
+            openSearchMode: () => {
+                this.setState({filtredItems: this._getCurrentItems()})
+                this.setState({searchMode: true})
+            },
+            closeSearchMode: () => { 
+                this.lastQuery = ''
+                this.setState({searchMode: false})
+                this.setState({filtredItems: []})
+            },
+            handleClearSearch : () => {
+                this.lastQuery = ''
+                this.setState({filtredItems: this._getCurrentItems()})
+            }
+        })
         this.fetchData();
     }
 
@@ -58,15 +79,28 @@ class BlockedScreen extends PureComponent {
         await this.props.getBlockedContent()
     }
 
-    handleSingleIndexSelect = (index) => {
-        this.setState({
-            selectedIndex: index,
+    handleSearch = (query, index) => {
+        this.lastQuery = query
+        const itemsToSearch = this._getCurrentItems(index)
+        filtredItems = itemsToSearch.filter((item) => {
+            let title = item.title ? item.title : item.name ? item.name : item
+            return title.toLowerCase().indexOf(query.toLowerCase()) !== -1
         })
+        this.setState({ filtredItems: _.isEmpty(query) ? itemsToSearch : filtredItems, selectedIndex: index })
     }
 
-    removeTitle = async (query) => {
-        await LocalStorage.pop("blockedTitles", query)
-        this.fetchData();
+    handleSingleIndexSelect = (index) => {
+        if(this.state.searchMode){
+            this.handleSearch(this.lastQuery, index)    
+        }else{
+            this.setState({
+                selectedIndex: index
+            })
+        }
+    }
+
+    removeTitle = (query) => {
+        this.props.unBlockTitle(query)
     }
 
     _renderItem = ({item}) => (
@@ -116,10 +150,30 @@ class BlockedScreen extends PureComponent {
         );
     };
 
-    _getCurrentItems(){
-        return this.state.selectedIndex === 0 ? this.props.blockedVideos : 
-        this.state.selectedIndex === 1 ? this.props.blockedChannels : 
-        this.props.blockedTitles
+    _getCurrentItems(index = this.state.selectedIndex){
+        return index === 0 ? this.props.blockedVideos : 
+                index === 1 ? this.props.blockedChannels : 
+            this.props.blockedTitles
+    }
+
+    _renderSearchResults = () => {
+        return (
+            <View style={styles.headerLayoutStyle}>
+                <FlatListEx
+                    data={this.state.filtredItems}
+                    renderItem={this._renderItem}
+                    keyExtractor={(item) => item.id ? item.id.toString() : item.toString()}
+                    refreshState={this.state.listState}
+                    onHeaderRefresh={this._handleRefresh}
+                    footerContainerStyle={{height: navHeight*1.5}}
+
+                    footerNoMoreDataComponent={this._renderNoMoreData()}
+                    footerEmptyDataComponent={this._renderEmptyData()}
+
+                    initialNumToRender={10}
+                />
+            </View>
+        )
     }
 
     _renderBody = () =>{
@@ -133,12 +187,11 @@ class BlockedScreen extends PureComponent {
                     ListHeaderComponent={
                         this.state.selectedIndex === 2 && (
                             <View style={{marginBottom: 10}}>
-                                <TextInputEx placeholderText="Add Title" onSubmit={async (query) => 
+                                <TextInputEx placeholderText="Add Title" onSubmit={(query) => 
                                 {
                                     if(!_.isEmpty(query))
                                     {
-                                        await LocalStorage.push("blockedTitles", query, {isExist: true})
-                                        this.fetchData()
+                                        this.props.blockTitle(query)
                                     }
                                 }} />
                             </View>
@@ -173,10 +226,11 @@ class BlockedScreen extends PureComponent {
                 onAnimationStop = {() => isfilterSlidingPanelOpen = !isfilterSlidingPanelOpen}
                 panelPosition= "top"
                 headerLayoutHeight = {height}
-                headerLayout = {this._renderBody}
+                headerLayout = {this.state.searchMode ? this._renderSearchResults : this._renderBody}
                 slidingPanelLayout = { () => 
                     <View style={styles.slidingPanelLayoutStyle}>
                         <SegmentedControlTab
+                            ref={ref => segmentedControlTab = ref}
                             values={['Videos', 'Channels', 'Titles']}
                             selectedIndex={this.state.selectedIndex}
                             tabStyle={styles.tabStyle}
@@ -204,7 +258,9 @@ function mapStateToProps(state, ownProps){
 }
 function mapDispatchToProps(actions){
     return {
-        getBlockedContent: actions.getBlockedContent
+        getBlockedContent: actions.getBlockedContent,
+        blockTitle: actions.blockTitle,
+        unBlockTitle: actions.unBlockTitle
     }
 }
 
@@ -239,6 +295,8 @@ wrappedComp.navigationOptions = ({ navigation }) => ({
                             <BorderlessButton
                                 onPress={() => {
                                     this.header.slidingPanel.onRequestClose()
+                                    filterSlidingPanel.onRequestStart();
+                                    navigation.state.params.openSearchMode()
                                 }}
                                 style={{justifyContent: 'center', paddingHorizontal: 10}}>
                                 <Ionicons
@@ -253,14 +311,22 @@ wrappedComp.navigationOptions = ({ navigation }) => ({
             tintColor={Platform.OS === 'ios' ? '#007AFF' : '#000'}>
                 <View style={{width}}>
                     <SearchLayout
+                        ref={ searchLayout => {
+                            searchBar = searchLayout
+                        }}
                         onBackButtonPressed={ () => {
+                            searchBar.setState({ q: '' })
+                            filterSlidingPanel.onRequestClose();
                             this.header.slidingPanel.onRequestStart()
+                            navigation.state.params.closeSearchMode()
                         }}
                         text=''
                         onChangeQuery={(query) => {
+                            navigation.state.params.handleSearch(query, segmentedControlTab.props.selectedIndex)
                         }}
                         onSubmit={this.onSubmit}
                         onClearQuery={() => {
+                            navigation.state.params.handleClearSearch()
                         }}
                     >
                     </SearchLayout>
