@@ -1,4 +1,4 @@
-import { AsyncStorage } from 'react-native';
+import AsyncStorage from '@react-native-community/async-storage';
 import EventEmitter from 'eventemitter3';
 var _ = require('lodash');
 import enabled from 'enabled';
