@@ -12,3 +12,11 @@ web-report/
 
 \.vscode/*
 package-lock\.json
+
+android/app/build/
+
+android/\.gradle/
+
+android/\.idea/
+
+android/keystores/
