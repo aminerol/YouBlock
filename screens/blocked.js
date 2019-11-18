@@ -179,24 +179,22 @@ class BlockedScreen extends PureComponent {
     _renderBody = () =>{
         return !this.props.loading ? (
             <View style={styles.headerLayoutStyle}>
+                {this.state.selectedIndex === 2 && (
+                    <View style={{marginBottom: 10}}>
+                        <TextInputEx placeholderText="Add Title" onSubmit={(query) => 
+                        {
+                            if(!_.isEmpty(query))
+                            {
+                                this.props.blockTitle(query)
+                            }
+                        }} />
+                    </View>
+                )}
                 <FlatListEx
                     ref={ref => this.flatList = ref}
                     data={this._getCurrentItems()}
                     renderItem={this._renderItem}
                     keyExtractor={(item) => item.id ? item.id.toString() : item.toString()}
-                    ListHeaderComponent={
-                        this.state.selectedIndex === 2 && (
-                            <View style={{marginBottom: 10}}>
-                                <TextInputEx placeholderText="Add Title" onSubmit={(query) => 
-                                {
-                                    if(!_.isEmpty(query))
-                                    {
-                                        this.props.blockTitle(query)
-                                    }
-                                }} />
-                            </View>
-                        )
-                    }
 
                     refreshState={this.state.listState}
                     onHeaderRefresh={this._handleRefresh}
