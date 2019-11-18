@@ -7,9 +7,7 @@ import {
   StyleSheet,
   View,
 } from 'react-native';
-import { HeaderBackButton } from 'react-navigation';
-import { getInset, getStatusBarHeight } from 'react-native-safe-area-view';
-import { isIphoneX } from 'react-native-platform-helper';
+import { isIphoneX, getStatusBarHeight } from 'react-native-platform-helper';
 import SlidingPanel from 'react-native-sliding-panels'
 const { width, height } = Dimensions.get('window');
 
