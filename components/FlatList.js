@@ -68,11 +68,24 @@ export default class FlatListEx extends PureComponent {
     render() {
         this.nativeEvent = null;
         this.isResponder = false;
-        let {renderItem, loadingDataText, loadingDataComponent, ...rest} = this.props
+        let {renderItem, loadingDataText, loadingDataComponent, footerEmptyDataText, footerEmptyDataComponent, ...rest} = this.props
         let footerContainerStyle = [styles.footerContainer, this.props.footerContainerStyle]
         let footerTextStyle = [styles.footerText, this.props.footerTextStyle]
 
-        return (
+        return this.props.refreshState === RefreshState.EmptyData ?
+        (
+            <TouchableOpacity onPress={() => {
+                this.props.onHeaderRefresh && this.props.onHeaderRefresh(RefreshState.HeaderRefreshing)
+            }}
+            >
+                {footerEmptyDataComponent ? footerEmptyDataComponent : (
+                <View style={footerContainerStyle}>
+                    <Text style={footerTextStyle}>{footerEmptyDataText}</Text>
+                </View>
+                )}
+            </TouchableOpacity>
+        ) :
+        (
             <FlatList
                 ref={this.props.listRef}
                 //onScroll={this.onScroll}
@@ -142,21 +155,6 @@ export default class FlatListEx extends PureComponent {
                         )}
                     </TouchableOpacity>
                 )
-                break
-            }
-            case RefreshState.EmptyData: {
-                footer = (
-                    <TouchableOpacity onPress={() => {
-                        this.props.onHeaderRefresh && this.props.onHeaderRefresh(RefreshState.HeaderRefreshing)
-                    }}
-                    >
-                        {footerEmptyDataComponent ? footerEmptyDataComponent : (
-                        <View style={footerContainerStyle}>
-                            <Text style={footerTextStyle}>{footerEmptyDataText}</Text>
-                        </View>
-                        )}
-                    </TouchableOpacity>
-                    )
                 break
             }
             case RefreshState.FooterRefreshing: {
