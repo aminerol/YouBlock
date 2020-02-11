@@ -32,6 +32,7 @@ const { width, height } = Dimensions.get('window');
 var _ = require('lodash');
 let filterSlidingPanel = {};
 let segmentedControlTab = {}
+let header = {}
 let searchBar = {}
 let isfilterSlidingPanelOpen = false;
 const navHeight = getNavBarHeight();
@@ -58,8 +59,11 @@ class BlockedScreen extends PureComponent {
             },
             closeSearchMode: () => { 
                 this.lastQuery = ''
-                this.setState({searchMode: false})
-                this.setState({filtredItems: []})
+                header.slidingPanel.onRequestStart(()=>{
+                    filterSlidingPanel.onRequestClose(()=>{
+                        this.setState({searchMode: false, filtredItems: []})
+                    }); 
+                }) 
             },
             handleClearSearch : () => {
                 this.lastQuery = ''
@@ -267,7 +271,7 @@ wrappedComp.navigationOptions = ({ navigation }) => ({
     headerBackground: (
         <Header
             ref={component => { 
-                this.header = component; 
+                header = component; 
             }}
             leftView={ <View style={{flex:0.2, flexDirection:'row', paddingHorizontal: 10,}}>
                             <Image source={require('../assets/images/logo.png')} style={{flex: 1, height:navHeight}} resizeMode='contain' />
@@ -292,7 +296,7 @@ wrappedComp.navigationOptions = ({ navigation }) => ({
 
                             <BorderlessButton
                                 onPress={() => {
-                                    this.header.slidingPanel.onRequestClose()
+                                    header.slidingPanel.onRequestClose()
                                     filterSlidingPanel.onRequestStart();
                                     navigation.state.params.openSearchMode()
                                 }}
@@ -314,9 +318,7 @@ wrappedComp.navigationOptions = ({ navigation }) => ({
                         }}
                         onBackButtonPressed={ () => {
                             searchBar.setState({ q: '' })
-                            filterSlidingPanel.onRequestClose();
-                            this.header.slidingPanel.onRequestStart()
-                            navigation.state.params.closeSearchMode()
+                            navigation.state.params.closeSearchMode()                                  
                         }}
                         text=''
                         onChangeQuery={(query) => {

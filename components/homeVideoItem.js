@@ -28,7 +28,7 @@ class HomeVideoItem extends PureComponent {
     }
   }
 
-  componentWillReceiveProps(nextProps, nextState){
+  componentWillReceiveProps(nextProps){
     this.setState({
       isVideoBlocked: nextProps.blockedVideos.some(item => item.id === this.video.id),
       isChannelBlocked: nextProps.blockedChannels.some(item => item.id === this.video.owner.id)
