@@ -8,9 +8,9 @@ import {
 } from 'react-native';
 import { BackHandler } from 'react-native';
 import { withNavigation, NavigationActions, StackActions } from 'react-navigation';
-import SearchVideoItem from '../Components/searchVideoItem';
-import EmptyContent from '../Components/emptyContent';
-import FlatListEx, {RefreshState} from '../Components/FlatList';
+import SearchVideoItem from '../components/searchVideoItem'
+import EmptyContent from '../components/emptyContent';
+import FlatListEx, {RefreshState} from '../components/FlatList';
 import YoutubeAPI from '../services/youtube';
 import LocalStorage from '../services/localStorage';
 import { BlockedStateContext } from '../Context/Blocked';

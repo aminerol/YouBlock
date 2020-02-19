@@ -16,14 +16,14 @@ import { getNavBarHeight } from 'react-native-platform-helper';
 import SegmentedControlTab from 'react-native-segmented-control-tab';
 import SlidingPanel from 'react-native-sliding-panels';
 import LocalStorage from '../services/localStorage';
-import EmptyContent from '../Components/emptyContent';
-import BlockedVideoItem from '../Components/blockedVideoItem';
-import FlatListEx, {RefreshState} from '../Components/FlatList';
-import Header from '../Components/Header'
+import EmptyContent from '../components/emptyContent';
+import BlockedVideoItem from '../components/blockedVideoItem';
+import FlatListEx, {RefreshState} from '../components/FlatList';
+import Header from '../components/Header'
 import LogUtils from '../utils/LogUtils';
-import BlockedChannelItem from '../Components/blockedChannelItem';
-import BlockedTitleItem from '../Components/blockedTitleItem';
-import TextInputEx from '../Components/TextInput';
+import BlockedChannelItem from '../components/blockedChannelItem';
+import BlockedTitleItem from '../components/blockedTitleItem';
+import TextInputEx from '../components/TextInput';
 import connect from '../Context/connect';
 import { BlockedStateContext } from '../Context/Blocked'
 import countRenders from '../utils/countRender';

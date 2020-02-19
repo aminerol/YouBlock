@@ -1,6 +1,6 @@
 import React, { Component, useEffect } from 'react';
 import { createAppContainer, createStackNavigator, createBottomTabNavigator} from 'react-navigation';
-import { ResultScreen, SearchScreen, HomeScreen, BlockedScreen} from '../Screens';
+import { ResultScreen, SearchScreen, HomeScreen, BlockedScreen} from '../screens';
 import { fromRight } from 'react-navigation-transitions';
 import { Ionicons } from '@expo/vector-icons';
 
