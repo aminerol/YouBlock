@@ -20,3 +20,7 @@ android/\.gradle/
 android/\.idea/
 
 android/keystores/
+ios/build
+ios/Pods
+Podfile.lock
+local.properties

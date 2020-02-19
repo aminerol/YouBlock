@@ -2,8 +2,8 @@ platform :ios, '10.0'
 
 require_relative '../node_modules/react-native-unimodules/cocoapods'
 
-target 'You Block' do
-  # Pods for You Block
+target 'YouBlock' do
+  # Pods for YouBlock
   pod 'React', :path => '../node_modules/react-native', :subspecs => [
     'Core',
     'CxxBridge',
@@ -31,6 +31,7 @@ target 'You Block' do
   pod 'RNScreens', :path => '../node_modules/react-native-screens'
 
   use_unimodules!
+
 
   pod 'RNCAsyncStorage', :path => '../node_modules/@react-native-community/async-storage'
 
