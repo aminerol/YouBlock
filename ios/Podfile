@@ -33,6 +33,5 @@ target 'YouBlock' do
   use_unimodules!
 
 
-  pod 'RNCAsyncStorage', :path => '../node_modules/@react-native-community/async-storage'
 
 end

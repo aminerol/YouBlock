@@ -12,6 +12,8 @@
 		13B07FBF1A68108700A75B9A /* Images.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 13B07FB51A68108700A75B9A /* Images.xcassets */; };
 		13B07FC11A68108700A75B9A /* main.m in Sources */ = {isa = PBXBuildFile; fileRef = 13B07FB71A68108700A75B9A /* main.m */; };
 		993A1FA9978727EB1B85C3D2 /* libPods-YouBlock.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 62DE50261057FA675BDA8F67 /* libPods-YouBlock.a */; };
+		E30BF33C48664DAFB915BB57 /* ElectrodeReactNativeBridge.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 6EC83B4462214D6A9C1686C4 /* ElectrodeReactNativeBridge.framework */; };
+		ECB720E7921849A2B682BA36 /* ElectrodeReactNativeBridgeTests.xctest in Resources */ = {isa = PBXBuildFile; fileRef = 86A94E2161D34DEBB98B341F /* ElectrodeReactNativeBridgeTests.xctest */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -29,6 +31,9 @@
 		AA819B1D36A69253AA42710B /* Pods-YouBlock.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-YouBlock.debug.xcconfig"; path = "Target Support Files/Pods-YouBlock/Pods-YouBlock.debug.xcconfig"; sourceTree = "<group>"; };
 		ED297162215061F000B7C4FE /* JavaScriptCore.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = JavaScriptCore.framework; path = System/Library/Frameworks/JavaScriptCore.framework; sourceTree = SDKROOT; };
 		ED2971642150620600B7C4FE /* JavaScriptCore.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = JavaScriptCore.framework; path = Platforms/AppleTVOS.platform/Developer/SDKs/AppleTVOS12.0.sdk/System/Library/Frameworks/JavaScriptCore.framework; sourceTree = DEVELOPER_DIR; };
+		1B0309060E524544821DDD75 /* ElectrodeReactNativeBridge.xcodeproj */ = {isa = PBXFileReference; name = "ElectrodeReactNativeBridge.xcodeproj"; path = "../node_modules/react-native-electrode-bridge/ios/ElectrodeReactNativeBridge.xcodeproj"; sourceTree = "<group>"; fileEncoding = undefined; lastKnownFileType = wrapper.pb-project; explicitFileType = undefined; includeInIndex = 0; };
+		6EC83B4462214D6A9C1686C4 /* ElectrodeReactNativeBridge.framework */ = {isa = PBXFileReference; name = "ElectrodeReactNativeBridge.framework"; path = "System/Library/Frameworks/ElectrodeReactNativeBridge.framework"; sourceTree = SDKROOT; fileEncoding = undefined; lastKnownFileType = wrapper.framework; explicitFileType = undefined; includeInIndex = 0; };
+		86A94E2161D34DEBB98B341F /* ElectrodeReactNativeBridgeTests.xctest */ = {isa = PBXFileReference; name = "ElectrodeReactNativeBridgeTests.xctest"; path = "ElectrodeReactNativeBridgeTests.xctest"; sourceTree = "<group>"; fileEncoding = undefined; lastKnownFileType = wrapper.cfbundle; explicitFileType = undefined; includeInIndex = 0; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -37,6 +42,8 @@
 			buildActionMask = 2147483647;
 			files = (
 				993A1FA9978727EB1B85C3D2 /* libPods-YouBlock.a in Frameworks */,
+				E30BF33C48664DAFB915BB57 /* ElectrodeReactNativeBridge.framework in Frameworks */,
+				ECB720E7921849A2B682BA36 /* ElectrodeReactNativeBridgeTests.xctest in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -81,6 +88,7 @@
 		832341AE1AAA6A7D00B99B32 /* Libraries */ = {
 			isa = PBXGroup;
 			children = (
+				1B0309060E524544821DDD75 /* ElectrodeReactNativeBridge.xcodeproj */,
 			);
 			name = Libraries;
 			sourceTree = "<group>";
@@ -136,7 +144,7 @@
 		83CBB9F71A601CBA00E9B192 /* Project object */ = {
 			isa = PBXProject;
 			attributes = {
-				LastUpgradeCheck = 0940;
+				LastUpgradeCheck = 940;
 				ORGANIZATIONNAME = Facebook;
 				TargetAttributes = {
 					00E356ED1AD99517003FC87E = {
@@ -275,6 +283,15 @@
 				PRODUCT_BUNDLE_IDENTIFIER = "org.reactjs.native.example.$(PRODUCT_NAME:rfc1034identifier)";
 				PRODUCT_NAME = YouBlock;
 				VERSIONING_SYSTEM = "apple-generic";
+				LIBRARY_SEARCH_PATHS = (
+					"$(inherited)",
+					"\"$(SRCROOT)/YouBlock/System/Library/Frameworks\"",
+					"\"$(SRCROOT)/YouBlock\"",
+				);
+				HEADER_SEARCH_PATHS = (
+					"$(inherited)",
+					"$(SRCROOT)/../node_modules/react-native-electrode-bridge/ios/**",
+				);
 			};
 			name = Debug;
 		};
@@ -294,6 +311,15 @@
 				PRODUCT_BUNDLE_IDENTIFIER = "org.reactjs.native.example.$(PRODUCT_NAME:rfc1034identifier)";
 				PRODUCT_NAME = YouBlock;
 				VERSIONING_SYSTEM = "apple-generic";
+				LIBRARY_SEARCH_PATHS = (
+					"$(inherited)",
+					"\"$(SRCROOT)/YouBlock/System/Library/Frameworks\"",
+					"\"$(SRCROOT)/YouBlock\"",
+				);
+				HEADER_SEARCH_PATHS = (
+					"$(inherited)",
+					"$(SRCROOT)/../node_modules/react-native-electrode-bridge/ios/**",
+				);
 			};
 			name = Release;
 		};

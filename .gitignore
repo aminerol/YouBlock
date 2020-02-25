@@ -13,7 +13,7 @@ web-report/
 \.vscode/*
 package-lock\.json
 
-android/app/build/
+android/app/build/**/*
 
 android/\.gradle/
 
