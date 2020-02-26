@@ -154,6 +154,8 @@ android {
 }
 
 dependencies {
+    implementation project(':react-native-community_async-storage')
+    implementation project(':electrode-reactnative-bridge')
     implementation project(':react-native-screens')
     implementation project(':react-native-reanimated')
     implementation project(':react-native-gesture-handler')
@@ -177,5 +179,3 @@ task copyDownloadableDepsToLibs(type: Copy) {
     from configurations.compile
     into 'libs'
 }
-
-apply from: file("../../node_modules/@react-native-community/cli-platform-android/native_modules.gradle"); applyNativeModulesAppBuildGradle(project)
